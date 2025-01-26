@@ -2,8 +2,12 @@ cmake_minimum_required(VERSION 3.14.0)
 set(PROJECT_NAME ghlfolder)
 project(${PROJECT_NAME} VERSION 0.1.0 LANGUAGES C CXX)
 
+# Find and include CURL headers
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIRS})
+
+# Include p-ranav/indicators headers
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/indicators/include)
 
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE include)
