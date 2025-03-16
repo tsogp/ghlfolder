@@ -11,11 +11,15 @@
 template <int MIN_WIDTH = 10, int MAX_WIDTH = 100>
 class progress_bar {
 public:
-    explicit progress_bar(int width) : width_(std::clamp(width, MIN_WIDTH, MAX_WIDTH)) {
-        std::cout << "[" << std::setw(width_ + BAR_POSTFIX_SIZE) << std::setfill(' ') << "]    0%";
+    explicit progress_bar(int width, bool init = false) : width_(std::clamp(width, MIN_WIDTH, MAX_WIDTH)) {
+        if (init) {
+            init_bar();
+        }
     }
 
     void tick(double step) {
+        init_bar();
+
         if (progress_ >= 1.0) {
             return;
         }
@@ -38,15 +42,19 @@ public:
     }
 
 private:
+    void init_bar() {
+        if (!is_initiated) {
+            std::cout << "[" << std::setw(width_ + BAR_POSTFIX_SIZE) << std::setfill(' ') << "]    0%";
+            is_initiated = true;
+        }
+    }
+
     static constexpr int BAR_POSTFIX_SIZE = 7;
 
-    int width_;
+    int width_, pos_{};
     double progress_{};
-    int pos_{};
+    bool is_initiated{};
 };
-
-
-class pregress_bar_pool {};
 
 
 #endif // __PROGRESS_BAR_HPP__
