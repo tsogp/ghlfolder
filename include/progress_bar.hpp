@@ -37,6 +37,13 @@ public:
         pos_ = new_pos;
     }
 
+    void resize(int new_width) {
+        is_initiated = false;
+        width_ = std::clamp(new_width, MIN_WIDTH, MAX_WIDTH);
+        pos_ = static_cast<int>(ceil(width_ * progress_));\
+        init_bar();
+    }
+
     [[nodiscard]] bool is_complete() const {
         return progress_ >= 1.0;
     }
@@ -44,7 +51,9 @@ public:
 private:
     void init_bar() {
         if (!is_initiated) {
-            std::cout << "[" << std::setw(width_ + BAR_POSTFIX_SIZE) << std::setfill(' ') << "]    0%";
+            std::cout << "[" << std::setw(pos_) << std::setfill('#') << "";  
+            std::cout << std::setw(width_ - pos_) << std::setfill(' ') << "";
+            std::cout << ']' << std::setw(5) << std::setfill(' ') << static_cast<int>(ceil(progress_ * 100.0)) << "%";
             is_initiated = true;
         }
     }
