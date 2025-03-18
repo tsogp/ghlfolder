@@ -24,8 +24,6 @@ public:
         progress_width_ =
             std::clamp(term_width - name_width_ - SIZE_WIDTH - 5, BAR_MIN_WIDTH, BAR_MAX_WIDTH) + BAR_POSTFIX_SIZE + 1;
         spacer_width_ = std::max(term_width - (name_width_ + SIZE_WIDTH + progress_width_), 5);
-
-        std::cout << term_width << " " << name_width_ << " " << progress_width_ << " " << spacer_width_ << '\n';
     }
 
     void display() {
