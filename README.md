@@ -1,5 +1,7 @@
 # **GitHub Directory Downloader**  
 
+[![Watch the video](https://github.com/tsogp/ghlfolder/blob/main/media/thumbnail.png?raw=true)](https://github.com/tsogp/ghlfolder/blob/main/media/demo.mp4?raw=true)
+
 A **multithreaded** command-line tool to download directories from GitHub repositories using the GitHub API.  
 Currently, it **only supports Linux**.
 
