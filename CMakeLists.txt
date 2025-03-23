@@ -6,6 +6,9 @@ project(${PROJECT_NAME} VERSION 0.1.0 LANGUAGES C CXX)
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIRS})
 
+# Find and include nlohmann/json
+find_package(nlohmann_json 3.11.3 REQUIRED)
+
 # Include p-ranav/argparse headers
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/argparse/include)
 
