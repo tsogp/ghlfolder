@@ -6,9 +6,8 @@ project(${PROJECT_NAME} VERSION 0.1.0 LANGUAGES C CXX)
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIRS})
 
-
-# Include p-ranav/indicators headers
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/indicators/include)
+# Include p-ranav/argparse headers
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/argparse/include)
 
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE include)
