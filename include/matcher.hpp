@@ -17,12 +17,12 @@ constexpr auto gitlab_pattern =
 } // namespace
 
 std::unique_ptr<r_base> get_repo_data(std::string_view url) {
-    if (auto [_, author, repo, branch, folder] = github_pattern.match(url)) {
-        return std::make_unique<r_github>(author.to_string(), repo.to_string(), branch.to_string(), folder.to_string());
+    if (auto [whole, author, repo, branch, folder] = github_pattern.match(url); whole) {
+        return std::make_unique<r_github>(author.to_view(), repo.to_view(), branch.to_view(), folder.to_view());
     }
 
-    if (auto [_, author, repo, branch, folder] = gitlab_pattern.match(url)) {
-        return std::make_unique<r_gitlab>(author.to_string(), repo.to_string(), branch.to_string(), folder.to_string());
+    if (auto [whole, author, repo, branch, folder] = gitlab_pattern.match(url); whole) {
+        return std::make_unique<r_gitlab>(author.to_view(), repo.to_view(), branch.to_view(), folder.to_view());
     }
 
     return nullptr;
