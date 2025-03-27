@@ -2,6 +2,7 @@
 #define __FETCH_BAR_HPP__
 
 #include "progress_bar.hpp"
+#include "term.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -13,12 +14,18 @@
 class fetch_bar {
 public:
     explicit fetch_bar(std::string name, unsigned int file_size)
-        : name_(std::move(name)), progress_(get_terminal_width()), file_size(file_size) {
+        : name_(std::move(name)), progress_(term_data::get_width()), file_size(file_size) {
         update_layout();
     }
 
+    fetch_bar() = default;
+    fetch_bar(fetch_bar &&b) = default;
+    fetch_bar(const fetch_bar &b) = default;
+    fetch_bar &operator=(fetch_bar &&b) = default;
+    fetch_bar &operator=(const fetch_bar &b) = default;
+
     void update_layout() {
-        int term_width = get_terminal_width();
+        int term_width = term_data::get_width();
 
         name_width_ = std::min(std::max(static_cast<int>(name_.size()), 5), 70);
         progress_width_ =
@@ -57,12 +64,6 @@ private:
             return str.substr(0, max_length - 3) + "...";
         }
         return str;
-    }
-
-    static int get_terminal_width() {
-        winsize size{};
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
-        return size.ws_col;
     }
 
     static std::string print_size(unsigned int bytes) {
