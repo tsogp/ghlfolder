@@ -19,6 +19,7 @@ public:
     explicit bar_pool(Bars &&...bars) {
         (bars_.emplace_back(std::move(bars)), ...);
         active_bar_idx_ = bars_.size() - 1;
+        total_bars_ = bars_.size() - 1;
         std::for_each(bars_.begin(), bars_.end(), [](const auto& bar) { bar->display(); });
     }
 
@@ -26,9 +27,10 @@ public:
         std::scoped_lock lck(mutex_);
         bar->display();
         bars_.push_back(std::move(bar));
+        ++total_bars_;
     }
 
-    fetch_bar &operator[](std::size_t index) {
+    void tick_i(std::size_t index, double progress) {
         std::scoped_lock lck(mutex_);
         if (index > active_bar_idx_) {
             move_cursor_down(index - active_bar_idx_);
@@ -37,13 +39,21 @@ public:
         }
 
         active_bar_idx_ = index;
-        return *bars_[index];
+        bars_[index]->tick(progress);
+        if (bars_[index]->is_complete()) {
+            move_cursor_down(total_bars_ - active_bar_idx_);
+        }
+    }
+
+    bool is_i_complete(std::size_t index) {
+        std::scoped_lock lck(mutex_);
+        return bars_[index]->is_complete();
     }
 
 private:
     std::mutex mutex_;
     std::vector<std::unique_ptr<fetch_bar>> bars_;
-    std::size_t active_bar_idx_{};
+    std::size_t active_bar_idx_{}, total_bars_{};
     bool started_{};
 
     static void move_cursor_up(std::size_t l) {
