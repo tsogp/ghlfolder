@@ -18,9 +18,8 @@ public:
     template <typename... Bars>
     explicit bar_pool(Bars &&...bars) {
         (bars_.emplace_back(std::move(bars)), ...);
-        active_bar_idx_ = bars_.size() - 1;
-        total_bars_ = bars_.size() - 1;
-        std::for_each(bars_.begin(), bars_.end(), [](const auto& bar) { bar->display(); });
+        total_bars_ = bars_.size();
+        std::for_each(bars_.begin(), bars_.end(), [](const auto &bar) { bar->display(); });
     }
 
     void push_back(std::unique_ptr<fetch_bar> bar) {
@@ -32,17 +31,10 @@ public:
 
     void tick_i(std::size_t index, double progress) {
         std::scoped_lock lck(mutex_);
-        if (index > active_bar_idx_) {
-            move_cursor_down(index - active_bar_idx_);
-        } else if (index < active_bar_idx_) {
-            move_cursor_up(active_bar_idx_ - index);
-        }
-
-        active_bar_idx_ = index;
+        std::size_t offset = total_bars_ - 1 - index;
+        move_cursor_up(offset);
         bars_[index]->tick(progress);
-        if (bars_[index]->is_complete()) {
-            move_cursor_down(total_bars_ - active_bar_idx_);
-        }
+        move_cursor_down(offset);
     }
 
     bool is_i_complete(std::size_t index) {
@@ -53,19 +45,23 @@ public:
 private:
     std::mutex mutex_;
     std::vector<std::unique_ptr<fetch_bar>> bars_;
-    std::size_t active_bar_idx_{}, total_bars_{};
+    std::size_t total_bars_{};
     bool started_{};
 
     static void move_cursor_up(std::size_t l) {
-        // TODO: think of a way to remove this offset
-        std::cout << "\033[" << 1 << "C";
-        std::cout << "\033[" << l << "A";
+        if (l != 0) {
+            // TODO: think of a way to remove this offset
+            std::cout << "\033[" << 1 << "C";
+            std::cout << "\033[" << l << "A";
+        }
     }
 
     static void move_cursor_down(std::size_t l) {
-        // TODO: think of a way to remove this offset
-        std::cout << "\033[" << 1 << "C";
-        std::cout << "\033[" << l << "B";
+        if (l != 0) {
+            // TODO: think of a way to remove this offset
+            std::cout << "\033[" << 1 << "C";
+            std::cout << "\033[" << l << "B";
+        }
     }
 };
 
