@@ -8,6 +8,8 @@
 #include <thread>
 #include <vector>
 
+// Implementation heavily influenced by https://nixiz.github.io/yazilim-notlari/2023/10/07/thread_pool-en
+
 class thread_pool {
 public:
     explicit thread_pool(uint32_t threads_num = 1) {
