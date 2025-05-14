@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 20)
 project(${PROJECT_NAME} VERSION 0.1.0 LANGUAGES C CXX)
 
 add_executable(${PROJECT_NAME} src/main.cpp)
-target_compile_options(${PROJECT_NAME} PRIVATE -fstandalone-debug -fsanitize=address -fno-omit-frame-pointer)
+target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
 target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
 target_include_directories(${PROJECT_NAME} PRIVATE include)
 
@@ -12,6 +12,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE include)
 find_package(CURL REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${CURL_LIBRARIES})
+
+# Find and include CPR library
+find_package(cpr REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
 
 # Find and include ctre
 find_package(ctre CONFIG REQUIRED)

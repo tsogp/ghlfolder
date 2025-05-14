@@ -34,9 +34,9 @@ public:
     }
 
     void display() {
-        std::cout << std::setw(name_width_) << truncate(name_, name_width_) << "";
-        std::cout << std::left << std::setw(spacer_width_) << "";
-        std::cout << std::right << std::setw(SIZE_WIDTH) << print_size(file_size) << "";
+        std::cout << "\r\n" << std::left << std::setw(name_width_) << truncate(name_, name_width_);
+        std::cout << std::setw(spacer_width_) << "";
+        std::cout << std::right << std::setw(SIZE_WIDTH) << print_size(file_size);
         progress_.init_bar();
     }
 

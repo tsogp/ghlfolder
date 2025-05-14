@@ -44,10 +44,6 @@ public:
         condition.notify_one();
     }
 
-    void download_directory(const std::string &url, const std::string &local_path) {
-        enqueue([this, url, local_path] { process_directory(url, local_path); });
-    }
-
     ~thread_pool() {
         {
             std::lock_guard<std::mutex> lock(queue_mutex);
@@ -65,33 +61,4 @@ private:
     std::mutex queue_mutex;
     std::condition_variable condition;
     bool stop = false;
-
-    void process_directory(const std::string &url, const std::string &local_path) {
-        nlohmann::json response = curl_wrapper::fetch(url);
-
-        std::filesystem::create_directories(local_path);
-        std::filesystem::permissions(local_path,
-                                     std::filesystem::perms::others_all,
-                                     std::filesystem::perm_options::remove);
-
-        for (const auto &entry : response) {
-            std::string name = entry["path"];
-            std::string path = local_path + "/" + name;
-
-            if (entry["type"] == "file" && !entry["download_url"].is_null()) {
-                std::string download_url = entry["download_url"];
-                unsigned int file_size = entry["size"];
-
-                enqueue([download_url, path, file_size] {
-                    fetch_bar bar(path, file_size);
-                    bar.display();
-                    curl_wrapper::download_file(download_url, path, bar);
-                });
-
-            } else if (entry["type"] == "dir") {
-                std::string new_url = entry["url"];
-                download_directory(new_url, path);
-            }
-        }
-    }
 };

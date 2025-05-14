@@ -85,7 +85,7 @@ private:
                          CURLOPT_USERAGENT,
                          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                          "Chrome/94.0.4606.81 Safari/537.36");
-        
+
         CURLcode res = curl_easy_perform(curl);
         return res == CURLE_OK;
     }
@@ -98,9 +98,9 @@ private:
     static size_t progress_callback(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
         if (dltotal > 0) {
             auto *bar = static_cast<fetch_bar *>(clientp);
-            double ratio = dlnow / dltotal; 
+            double ratio = dlnow / dltotal;
             bar->tick(ratio);
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
         return 0;
     }
