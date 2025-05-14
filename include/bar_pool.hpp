@@ -22,11 +22,11 @@ public:
         std::for_each(bars_.begin(), bars_.end(), [](const auto &bar) { bar->display(); });
     }
 
-    void push_back(std::unique_ptr<fetch_bar> bar) {
+    std::size_t push_back(std::unique_ptr<fetch_bar> bar) {
         std::scoped_lock lck(mutex_);
         bar->display();
         bars_.push_back(std::move(bar));
-        ++total_bars_;
+        return total_bars_++;
     }
 
     void tick_i(std::size_t index, double progress) {
