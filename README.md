@@ -19,7 +19,8 @@ Currently, it **only supports Linux**.
 Make sure you have the following installed on your system:  
 - **C++ compiler (g++)**  
 - **CMake**  
-- **libcurl** (for HTTP requests)  
+- **pranav/argparse** (for parsing command line arguments)
+- **libcpr** (C++ cURL wrapper for HTTP requests)  
 - **nlohmann/json** (for JSON parsing)  
 
 ### **Build Instructions**  
