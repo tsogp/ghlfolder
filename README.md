@@ -24,8 +24,8 @@ Make sure you have the following installed on your system:
 
 ### **Build Instructions**  
 ```sh
-git clone https://github.com/<your-username>/github-downloader.git
-cd github-downloader
+git clone https://github.com/tsogp/ghlfolder.git
+cd ghlfolder
 mkdir build && cd build
 cmake ..
 make
