@@ -36,5 +36,5 @@ make
 Just copy the GitHub folder from the browser's URL bar and run it the same way you run *git clone*
 ```sh
 ./ghlfolder "https://github.com/<author>/<repo>/tree/<branch>/<folder>"
-./ghlfolder "https://github.com/<author>/<repo>/tree/<branch>/<folder>" --output-dir=/home/user
+./ghlfolder "https://github.com/<author>/<repo>/tree/<branch>/<folder>" --output_dir=/home/user
 ```
