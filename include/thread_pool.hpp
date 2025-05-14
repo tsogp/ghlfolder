@@ -1,97 +1,60 @@
-#include "fetch_bar.hpp"
-#include <condition_variable>
-#include <curl/curl.h>
-#include <curl_wrapper.hpp>
-#include <functional>
-#include <nlohmann/json.hpp>
-#include <queue>
-#include <sys/stat.h>
+#ifndef __THREAD_POOL_HPP__
+#define __THREAD_POOL_HPP__
+
+#include <cstdint>
+#include <deque>
+#include <future>
+#include <mutex>
 #include <thread>
 #include <vector>
 
+// Implementation heavily influenced by https://nixiz.github.io/yazilim-notlari/2023/10/07/thread_pool-en
+
 class thread_pool {
 public:
-    thread_pool(const thread_pool &tp) = delete;
-    thread_pool(thread_pool &&tp) = delete;
-    thread_pool &operator=(const thread_pool &tp) = delete;
-    thread_pool &operator=(thread_pool &&tp) = delete;
-
-    explicit thread_pool(size_t thread_count) {
-        for (size_t i = 0; i < thread_count; ++i) {
-            workers.emplace_back([this] {
-                while (true) {
-                    std::function<void()> task;
-                    {
-                        std::unique_lock<std::mutex> lock(queue_mutex);
-                        condition.wait(lock, [this] { return !tasks.empty() || stop; });
-                        if (stop && tasks.empty()) {
-                            return;
-                        }
-                        task = std::move(tasks.front());
-                        tasks.pop();
-                    }
-                    task();
-                }
-            });
+    explicit thread_pool(uint32_t threads_num = 1) {
+        const uint32_t current_threads_num = std::min(threads_num, std::thread::hardware_concurrency());
+        for (int i = 0; i < current_threads_num; i++) {
+            pool_.emplace_back(&thread_pool::run, this);
         }
-    }
-
-    void enqueue(std::function<void()> task) {
-        {
-            std::lock_guard<std::mutex> lock(queue_mutex);
-            tasks.push(std::move(task));
-        }
-        condition.notify_one();
-    }
-
-    void download_directory(const std::string &url, const std::string &local_path) {
-        enqueue([this, url, local_path] { process_directory(url, local_path); });
     }
 
     ~thread_pool() {
-        {
-            std::lock_guard<std::mutex> lock(queue_mutex);
-            stop = true;
+        is_active_ = false;
+        cv_.notify_all();
+        for (auto &th : pool_) {
+            th.join();
         }
-        condition.notify_all();
-        for (std::thread &worker : workers) {
-            worker.join();
-        }
+    }
+
+    void push_job(std::packaged_task<void()> job) {
+        std::scoped_lock lock(mutex_);
+        pending_jobs_.emplace_back(std::move(job));
+        cv_.notify_one();
     }
 
 private:
-    std::vector<std::thread> workers;
-    std::queue<std::function<void()>> tasks;
-    std::mutex queue_mutex;
-    std::condition_variable condition;
-    bool stop = false;
+    std::vector<std::thread> pool_;
+    std::atomic_bool is_active_{true};
+    std::deque<std::packaged_task<void()>> pending_jobs_;
+    std::condition_variable cv_;
+    std::mutex mutex_;
 
-    void process_directory(const std::string &url, const std::string &local_path) {
-        nlohmann::json response = curl_wrapper::fetch(url);
-
-        std::filesystem::create_directories(local_path);
-        std::filesystem::permissions(local_path,
-                                     std::filesystem::perms::others_all,
-                                     std::filesystem::perm_options::remove);
-
-        for (const auto &entry : response) {
-            std::string name = entry["path"];
-            std::string path = local_path + "/" + name;
-
-            if (entry["type"] == "file" && !entry["download_url"].is_null()) {
-                std::string download_url = entry["download_url"];
-                unsigned int file_size = entry["size"];
-
-                enqueue([download_url, path, file_size] {
-                    fetch_bar bar(path, file_size);
-                    bar.display();
-                    curl_wrapper::download_file(download_url, path, bar);
-                });
-
-            } else if (entry["type"] == "dir") {
-                std::string new_url = entry["url"];
-                download_directory(new_url, path);
+    void run() noexcept {
+        while (is_active_) {
+            thread_local std::packaged_task<void()> job;
+            {
+                std::unique_lock lock(mutex_);
+                cv_.wait(lock, [&] { return !pending_jobs_.empty() || !is_active_; });
+                if (!is_active_) {
+                    break;
+                }
+                job.swap(pending_jobs_.front());
+                pending_jobs_.pop_front();
             }
+            job();
         }
-    }
+    };
 };
+
+#endif // __THREAD_POOL_HPP__
