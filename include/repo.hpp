@@ -131,21 +131,6 @@ public:
         std::cout << std::format("Cloning into {}...", data.folder);
 
         handle_metadata_request(std::move(url_));
-        // std::cout << "Fetching repo data...\n";
-        // cpr::Response r = cpr::Get(cpr::Url{std::move(url_)});
-        // if (r.status_code >= 400) {
-        //     std::cerr << "Error [" << r.status_code << "] making request" << std::endl;
-        // } else {
-        //     std::cout << "Request took " << r.text << std::endl;
-        // json data = json::parse(r.text);
-        // std::cout << data << '\n';
-        // for (auto &it : data) {
-        //     std::packaged_task<void()> task(
-        //         [name = it["path"], url = it["download_url"], file_size = it["size"], this] {
-        //             handle_request(name, url, file_size);
-        //         });
-        //     worker_pool_.push_job(std::move(task));
-        // }
     }
 };
 
