@@ -24,7 +24,7 @@ bool is_writable(const std::string &path) {
 }
 
 int main(int argc, char *argv[]) {
-    argparse::ArgumentParser program("program_name");
+    argparse::ArgumentParser program("ghlfolder");
 
     program.add_argument("url").help("GitHub or GitLab subfolder URL");
 
