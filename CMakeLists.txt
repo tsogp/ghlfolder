@@ -27,3 +27,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 
 # Include p-ranav/argparse headers
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/argparse/include)
+
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
