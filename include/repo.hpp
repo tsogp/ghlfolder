@@ -14,6 +14,7 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <string_view>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -31,7 +32,6 @@ public:
     thread_pool worker_pool_;
     bar_pool bar_pool_;
     std::string url_;
-    std::string_view output_dir_;
     r_data data;
 
     r_base() = delete;
@@ -39,9 +39,25 @@ public:
            std::string_view name,
            std::string_view branch,
            std::string_view folder,
-           std::string_view output_dir)
-        : data(author, name, branch, folder), worker_pool_(4), output_dir_(output_dir) {
-        std::filesystem::create_directory(folder);
+            bool create_dir = false)
+        : data(author, name, branch, folder), worker_pool_(4) {
+        if (create_dir) {
+            if (fs::exists(folder)) {
+                if (!fs::is_empty(folder)) {
+                    std::cerr << std::format("Error: output directory '{}' already exists and it is not empty.\n", folder);
+                    exit(1);
+                }
+            } else if (!fs::create_directory(folder)) {
+                std::cerr << std::format("Error: couldn't create directory {}", folder);
+                exit(1);
+            }
+
+            fs::current_path(folder);
+
+            // No endline character here because each new fetch bar starts with one
+            std::cout << std::format("Cloning into '{}'...", folder);
+        };
+
     }
 
     r_base(const r_base &br) = default;
@@ -65,15 +81,16 @@ public:
              std::string_view name,
              std::string_view branch,
              std::string_view folder,
-             std::string_view output_dir)
-        : r_base(author, name, branch, folder, output_dir) {
+            bool create_dir = false)
+        : r_base(author, name, branch, preprocess_folder(folder), create_dir) {
         url_ = std::format("https://api.github.com/repos/{}/{}/contents/{}?ref={}", author, name, folder, branch);
     }
 
     void handle_metadata_request(std::string url) {
         cpr::Response r = cpr::Get(cpr::Url{std::move(url)});
-        if (r.status_code >= 400) {
-            std::cerr << "Error [" << r.status_code << "] making request" << std::endl;
+        if (r.status_code == 404) {
+            std::cerr << "\nServer returned 404: does not exist. Check again if the repository URL is correct.";
+            std::exit(1);
         } else {
             if (r.text.empty()) {
                 return;
@@ -81,16 +98,18 @@ public:
 
             json data = json::parse(r.text);
             for (auto &it : data) {
+                // TODO: fix to avoid copying
+                std::string trimmed_path = it["path"].template get<std::string>().substr(pathb_idx_);
                 if (it["type"] == "file") {
                     auto task = std::packaged_task<void()>(
-                        [name = it["path"], url = it["download_url"], file_size = it["size"], this] {
+                        [name = trimmed_path, url = it["download_url"], file_size = it["size"], this] {
                             handle_request(name, url, file_size);
                         });
                     auto fut = task.get_future();
                     futures_.emplace_back(std::move(fut));
                     worker_pool_.push_job(std::move(task));
                 } else if (it["type"] == "dir") {
-                    fs::create_directory(it["path"]);
+                    fs::create_directory(trimmed_path);
                     handle_metadata_request(std::move(it["url"]));
                 }
             }
@@ -122,15 +141,16 @@ public:
     }
 
     void start() override {
-        if (fs::create_directory(data.folder)) {
-            std::cerr << std::format("Error: couldn't create directory %s", data.folder);
-            return;
-        }
-
-        // No endline character here because each new fetch bar starts with one
-        std::cout << std::format("Cloning into {}...", data.folder);
-
         handle_metadata_request(std::move(url_));
+    }
+private:
+    // Position where the relative path of the cloned subfolder begins
+    std::size_t pathb_idx_;
+
+    std::string_view preprocess_folder(std::string_view folder) {
+        std::size_t last_slash_idx = folder.rfind('/') + 1; 
+        pathb_idx_ = folder.size() + 1;
+        return folder.substr(last_slash_idx, folder.size() - last_slash_idx);
     }
 };
 
@@ -139,9 +159,8 @@ public:
     r_gitlab(std::string_view author,
              std::string_view name,
              std::string_view branch,
-             std::string_view folder,
-             std::string_view output_dir)
-        : r_base(author, name, branch, folder, output_dir) {
+             std::string_view folder)
+        : r_base(author, name, branch, folder) {
         url_ = std::format("https://gitlab.com/api/v4/projects/{}%2F{}", author, name);
     }
 
