@@ -3,7 +3,10 @@ set(PROJECT_NAME ghlfolder)
 set(CMAKE_CXX_STANDARD 20)
 project(${PROJECT_NAME} VERSION 0.1.0 LANGUAGES C CXX)
 
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME} 
+    src/main.cpp 
+    src/fetch_bar.cpp
+)
 target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
 target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
 target_include_directories(${PROJECT_NAME} PRIVATE include)
