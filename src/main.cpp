@@ -1,13 +1,11 @@
 #include "matcher.hpp"
 #include <argparse/argparse.hpp>
-#include <chrono>
 #include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <sys/ioctl.h>
-#include <optional>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
@@ -37,6 +35,13 @@ int main(int argc, char *argv[]) {
     try {
         program.parse_args(argc, argv);
 
+    } catch (const std::exception &e) {
+        std::cerr << e.what() << '\n';
+        std::cerr << program;
+        std::exit(1);
+    }    
+    
+    try {
         std::string raw_url = program.get("url");
         std::string output_dir = program.get("output_dir");
         
@@ -66,10 +71,6 @@ int main(int argc, char *argv[]) {
         repo->start();
         repo->wait_for_all();
     } catch (const fs::filesystem_error &e) {
-        std::cerr << e.what() << '\n';
-        std::cerr << program;
-        std::exit(1);
-    } catch (const std::exception &e) {
         std::cerr << e.what() << '\n';
         std::cerr << program;
         std::exit(1);

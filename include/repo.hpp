@@ -88,7 +88,10 @@ public:
 
     void handle_metadata_request(std::string url) {
         cpr::Response r = cpr::Get(cpr::Url{std::move(url)});
-        if (r.status_code == 404) {
+        if (r.status_code == 0) {
+            std::cerr << "\nError: " << r.error.message << '\n';
+            exit(1);
+        } else if (r.status_code == 404) {
             std::cerr << "\nServer returned 404: does not exist. Check again if the repository URL is correct.";
             std::exit(1);
         } else {
