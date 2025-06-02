@@ -9,6 +9,7 @@ add_executable(${PROJECT_NAME}
     src/thread_pool.cpp
     src/term.cpp
     src/matcher.cpp
+    src/repo.cpp
 )
 target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
 target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
