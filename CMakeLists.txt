@@ -11,6 +11,7 @@ add_executable(${PROJECT_NAME}
     src/matcher.cpp
     src/repo.cpp
     src/bar_pool.cpp
+    src/progress_bar.cpp
 )
 target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
 target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)

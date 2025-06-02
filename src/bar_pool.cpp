@@ -1,5 +1,6 @@
 #include "bar_pool.hpp"
 #include "fetch_bar.hpp"
+#include <iostream>
 #include <algorithm>
 #include <cstddef>
 #include <memory>
