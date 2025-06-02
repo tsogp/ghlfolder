@@ -8,6 +8,7 @@ add_executable(${PROJECT_NAME}
     src/fetch_bar.cpp
     src/thread_pool.cpp
     src/term.cpp
+    src/matcher.cpp
 )
 target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
 target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
