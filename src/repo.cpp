@@ -65,6 +65,11 @@ void r_github::handle_metadata_request(std::string url) {
     } else if (r.status_code == 404) {
         std::cerr << "\nServer returned 404: does not exist. Check again if the repository URL is correct.";
         std::exit(1);
+    } else if (r.status_code == 403 || r.status_code == 429) {
+        // TODO: write the instructions with what to do in case if quota is over
+        json data = json::parse(r.text);
+        std::cerr << '\n' << data["message"];
+        std::exit(1);
     } else {
         if (r.text.empty()) {
             return;
