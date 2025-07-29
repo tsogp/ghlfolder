@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 namespace term_data {
+bool got_not_null_cols();
 int get_width();
 }; // namespace term_data
 

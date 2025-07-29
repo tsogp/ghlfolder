@@ -23,14 +23,14 @@ public:
 
 private:
     std::string name_;
-    progress_bar<> progress_;
     int name_width_ = 5;
     int spacer_width_ = 5;
     int progress_width_ = 10;
-
+    progress_bar<> progress_;
+    
     unsigned int file_size;
 
-    static constexpr int SIZE_WIDTH = 10;
+    static constexpr int _SIZE_WIDTH = 10;
 };
 
 #endif // __FETCH_BAR_HPP__
