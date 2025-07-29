@@ -20,4 +20,12 @@ bool got_not_null_cols() {
     }
     return retries != max_retries;
 }
+
+void hide_cursor() {
+    std::cout << "\033[?25l";
+}
+
+void show_cursor() {
+    std::cout << "\033[?25h";
+}
 }; // namespace term_data

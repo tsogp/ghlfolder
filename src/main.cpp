@@ -24,6 +24,8 @@ bool is_writable(const std::string &path) {
 }
 
 int main(int argc, char *argv[]) {
+    term_data::hide_cursor();
+
     argparse::ArgumentParser program("ghlfolder");
 
     program.add_argument("url").help("GitHub or GitLab subfolder URL").required();
@@ -87,6 +89,6 @@ int main(int argc, char *argv[]) {
     }
 
     std::cout << "\nDone.\n";
-
+    term_data::show_cursor();
     return 0;
 }

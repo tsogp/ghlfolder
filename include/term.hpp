@@ -7,6 +7,8 @@
 namespace term_data {
 bool got_not_null_cols();
 int get_width();
+void hide_cursor();
+void show_cursor();
 }; // namespace term_data
 
 #endif // __TERM_HPP__
