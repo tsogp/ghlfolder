@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <string_view>
+#include <array>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
@@ -17,7 +19,7 @@ namespace {
     }
 
     std::string print_size(unsigned int bytes) {
-        const char *units[] = {"B", "KB", "MB", "GB"};
+        static constexpr std::array<std::string_view, 4> units = {"B", "KB", "MB", "GB"}; 
         double size = bytes;
         int unitIndex = 0;
 
