@@ -1,10 +1,12 @@
 #include "matcher.hpp"
+#include "term.hpp"
 #include <argparse/argparse.hpp>
 #include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
@@ -24,13 +26,14 @@ bool is_writable(const std::string &path) {
 int main(int argc, char *argv[]) {
     argparse::ArgumentParser program("ghlfolder");
 
-    program.add_argument("url")
-        .help("GitHub or GitLab subfolder URL")
-        .required();
+    program.add_argument("url").help("GitHub or GitLab subfolder URL").required();
 
-    program.add_argument("output_dir")
+    program.add_argument("--output_dir")
         .default_value(std::string("."))
         .help("Output directory for the subfolder contents");
+    
+    program.add_argument("--token")
+        .help("GitHub or GitLab token");
 
     try {
         program.parse_args(argc, argv);
@@ -39,17 +42,24 @@ int main(int argc, char *argv[]) {
         std::cerr << e.what() << '\n';
         std::cerr << program;
         std::exit(1);
-    }    
-    
+    }
+
+    if (!term_data::got_not_null_cols()) {
+        std::cerr << "Couldn't get the terminal width.";
+        std::exit(1);
+    }
+
     try {
         std::string raw_url = program.get("url");
         std::string output_dir = program.get("output_dir");
-        
+        std::optional<std::string> token = program.present("token");
+
         bool is_non_standard_dir = output_dir != ".";
         if (is_non_standard_dir) {
             if (!fs::create_directories(output_dir)) {
                 if (!fs::is_empty(output_dir)) {
-                    std::cerr << std::format("Error: output directory '{}' already exists and it is not empty.\n", output_dir);
+                    std::cerr << std::format("Error: output directory '{}' already exists and it is not empty.\n",
+                                             output_dir);
                     exit(1);
                 }
             } else if (!fs::is_directory(output_dir)) {
@@ -67,7 +77,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Create directory of subfolder name only if output_dir is not passed
-        auto repo = matcher::get_repo_data(raw_url, !is_non_standard_dir);
+        auto repo = matcher::get_repo_data(raw_url, !is_non_standard_dir, token);
         repo->start();
         repo->wait_for_all();
     } catch (const fs::filesystem_error &e) {

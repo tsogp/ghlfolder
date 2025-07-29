@@ -46,7 +46,7 @@ void fetch_bar::update_layout() {
 
     name_width_ = std::clamp(static_cast<int>(name_.size()), 5, 70);
     progress_width_ =
-        std::clamp(term_width - name_width_ - _SIZE_WIDTH - 5, BAR_MIN_WIDTH, BAR_MAX_WIDTH);// + BAR_POSTFIX_SIZE + 1;
+        std::clamp(term_width - name_width_ - _SIZE_WIDTH - 5, BAR_MIN_WIDTH, BAR_MAX_WIDTH);
     spacer_width_ = std::max(term_width - (name_width_ + _SIZE_WIDTH + progress_width_), 5);
 }
 

@@ -13,9 +13,9 @@ constexpr auto gitlab_pattern =
 
 namespace matcher {
 
-std::unique_ptr<r_base> get_repo_data(std::string_view url, bool create_dir = false) {
+std::unique_ptr<r_base> get_repo_data(std::string_view url, bool create_dir = false, std::optional<std::string_view> token = std::nullopt) {
     if (auto [whole, author, repo, branch, folder] = github_pattern.match(url); whole) {
-        return std::make_unique<r_github>(author.to_view(), repo.to_view(), branch.to_view(), folder.to_view(), create_dir);
+        return std::make_unique<r_github>(author.to_view(), repo.to_view(), branch.to_view(), folder.to_view(), token, create_dir);
     }
 
     // TODO: implement GitLab 

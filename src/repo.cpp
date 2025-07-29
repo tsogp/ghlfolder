@@ -3,6 +3,7 @@
 #include "fetch_bar.hpp"
 #include "thread_pool.hpp"
 #include <cpr/api.h>
+#include <cpr/bearer.h>
 #include <cpr/cpr.h>
 #include <cstddef>
 #include <filesystem>
@@ -21,8 +22,9 @@ r_base::r_base(std::string_view author,
         std::string_view name,
         std::string_view branch,
         std::string_view folder,
+        std::optional<std::string_view> token,
         bool create_dir)
-    : data(author, name, branch, folder), worker_pool_(4) {
+    : data(author, name, branch, folder), token(token), worker_pool_(4) {
     if (create_dir) {
         if (fs::exists(folder)) {
             if (!fs::is_empty(folder)) {
@@ -39,7 +41,6 @@ r_base::r_base(std::string_view author,
         // No endline character here because each new fetch bar starts with one
         std::cout << std::format("Cloning into '{}'...", folder);
     };
-
 }
 
 void r_base::wait_for_all() {
@@ -52,23 +53,32 @@ r_github::r_github(std::string_view author,
             std::string_view name,
             std::string_view branch,
             std::string_view folder,
+            std::optional<std::string_view> token,
         bool create_dir)
-    : r_base(author, name, branch, preprocess_folder(folder), create_dir) {
+    : r_base(author, name, branch, preprocess_folder(folder), token, create_dir) {
     url_ = std::format("https://api.github.com/repos/{}/{}/contents/{}?ref={}", author, name, folder, branch);
 }
 
 void r_github::handle_metadata_request(std::string url) {
-    cpr::Response r = cpr::Get(cpr::Url{std::move(url)});
+    cpr::Response r = token
+        ? cpr::Get(cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)})
+        : cpr::Get(cpr::Url{std::move(url)});
+
     if (r.status_code == 0) {
         std::cerr << "\nError: " << r.error.message << '\n';
         exit(1);
     } else if (r.status_code == 404) {
-        std::cerr << "\nServer returned 404: does not exist. Check again if the repository URL is correct.";
+        std::cerr << "\nServer returned 404: does not exist. Check again if the repository URL is correct or you have access rights to it.";
+        std::exit(1);
+    } else if (r.status_code == 401) {
+        std::cerr << "\nServer returned 401: autorization required. Check again if the token that you have provided is correct.";
         std::exit(1);
     } else if (r.status_code == 403 || r.status_code == 429) {
         // TODO: write the instructions with what to do in case if quota is over
         json data = json::parse(r.text);
         std::cerr << '\n' << data["message"];
+        std::cerr << "\nServer returned 403: not autorized." 
+                     "This might be due to no remaining quota for your IP. Consider adding a GitHub token with --token=<token> option.";
         std::exit(1);
     } else {
         if (r.text.empty()) {
@@ -100,18 +110,20 @@ void r_github::handle_request(const std::string &name, std::string url, unsigned
     const std::size_t idx = bar_pool_.push_back(std::make_unique<fetch_bar>(name, file_size));
     unsigned int downloaded = 0;
 
-    cpr::Response r =
-        cpr::Download(of,
-                        cpr::Url{std::move(url)},
-                        cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
-                                                cpr::cpr_off_t downloadNow,
-                                                cpr::cpr_off_t uploadTotal,
-                                                cpr::cpr_off_t uploadNow,
-                                                intptr_t userdata) -> bool {
-                            bar_pool_.tick_i(idx, (static_cast<double>(downloadNow) - downloaded) / file_size);
-                            downloaded = downloadNow;
-                            return true;
-                        }));
+    auto callback = cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
+        cpr::cpr_off_t downloadNow,
+        cpr::cpr_off_t uploadTotal,
+        cpr::cpr_off_t uploadNow,
+        intptr_t userdata) -> bool {
+            bar_pool_.tick_i(idx, (static_cast<double>(downloadNow) - downloaded) / file_size);
+            downloaded = downloadNow;
+            return true;
+        }
+    );
+
+    cpr::Response r = token
+        ? cpr::Download(of, cpr::Url{std::move(url)}, callback, cpr::Bearer{std::string(*token)})
+        : cpr::Download(of, cpr::Url{std::move(url)}, callback);
 
     // by here we know that downloading is completed
     if (downloaded < file_size) {
@@ -132,8 +144,9 @@ std::string_view r_github::preprocess_folder(std::string_view folder) {
 r_gitlab::r_gitlab(std::string_view author,
             std::string_view name,
             std::string_view branch,
-            std::string_view folder)
-    : r_base(author, name, branch, folder) {
+            std::string_view folder,
+            std::optional<std::string_view> token)
+    : r_base(author, name, branch, folder, token) {
     url_ = std::format("https://gitlab.com/api/v4/projects/{}%2F{}", author, name);
 }
 

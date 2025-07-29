@@ -18,9 +18,6 @@ bool got_not_null_cols() {
     while ((cols = get_width()) == 0 && retries != max_retries) {
         ++retries;
     }
-    if (retries != max_retries) {
-        std::cout << cols << '\n';
-    }
     return retries != max_retries;
 }
 }; // namespace term_data

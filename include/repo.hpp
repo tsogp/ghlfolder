@@ -24,6 +24,7 @@ public:
     thread_pool worker_pool_;
     bar_pool bar_pool_;
     std::string url_;
+    std::optional<std::string_view> token;
     r_data data;
 
     r_base() = delete;
@@ -31,6 +32,7 @@ public:
            std::string_view name,
            std::string_view branch,
            std::string_view folder,
+           std::optional<std::string_view> token,
             bool create_dir = false);
 
     r_base(const r_base &br) = default;
@@ -50,6 +52,7 @@ public:
              std::string_view name,
              std::string_view branch,
              std::string_view folder,
+             std::optional<std::string_view> token,
             bool create_dir = false);
 
     void handle_metadata_request(std::string url);
@@ -67,7 +70,8 @@ public:
     r_gitlab(std::string_view author,
              std::string_view name,
              std::string_view branch,
-             std::string_view folder);
+             std::string_view folder,
+             std::optional<std::string_view> token);
 
     void start() override;
 };
