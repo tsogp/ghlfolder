@@ -3,8 +3,8 @@ set(PROJECT_NAME ghlfolder)
 set(CMAKE_CXX_STANDARD 20)
 project(${PROJECT_NAME} VERSION 0.1.0 LANGUAGES C CXX)
 
-add_executable(${PROJECT_NAME} 
-    src/main.cpp 
+add_executable(${PROJECT_NAME}
+    src/main.cpp
     src/fetch_bar.cpp
     src/thread_pool.cpp
     src/term.cpp
@@ -12,6 +12,7 @@ add_executable(${PROJECT_NAME}
     src/repo.cpp
     src/bar_pool.cpp
     src/progress_bar.cpp
+    src/zip_file.cpp
 )
 target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
 target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
@@ -33,6 +34,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ctre::ctre)
 # Find and include nlohmann/json
 find_package(nlohmann_json 3.11.3 REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
+
+find_package(libzip REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE zip)
 
 # Include p-ranav/argparse headers
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/argparse/include)

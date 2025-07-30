@@ -2,9 +2,11 @@
 #include "bar_pool.hpp"
 #include "fetch_bar.hpp"
 #include "thread_pool.hpp"
+#include "zip_file.hpp"
 #include <cpr/api.h>
 #include <cpr/bearer.h>
 #include <cpr/cpr.h>
+#include <cpr/response.h>
 #include <cstddef>
 #include <filesystem>
 #include <format>
@@ -12,11 +14,61 @@
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <random>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
+
+namespace {
+    std::string random_string(std::string::size_type length) {
+        static auto& chrs = "0123456789"
+            "abcdefghijklmnopqrstuvwxyz"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        thread_local static std::mt19937 rg{std::random_device{}()};
+        thread_local static std::uniform_int_distribution<std::string::size_type> pick(0, sizeof(chrs) - 2);
+
+        std::string s;
+        s.reserve(length);
+
+        while(length--) {
+            s += chrs[pick(rg)];
+        }
+
+        return s;
+    }
+
+    bool if_response_successful(const cpr::Response& r) {
+        if (r.status_code == 0) {
+            std::cerr << "\nError: " << r.error.message << '\n';
+            return false;
+        } 
+        
+        if (r.status_code == 404) {
+            std::cerr << "\nServer returned 404: does not exist. Check again if the repository URL is correct or you have access rights to it.";
+            return false;
+        } 
+        
+        if (r.status_code == 401) {
+            std::cerr << "\nServer returned 401: autorization required. Check again if the token that you have provided is correct.";
+            return false;
+        } 
+        
+        if (r.status_code == 403 || r.status_code == 429) {
+            // TODO: write the instructions with what to do in case if quota is over
+            json data = json::parse(r.text);
+            std::cerr << '\n' << data["message"];
+            std::cerr << "\nServer returned 403: not autorized." 
+                         "This might be due to no remaining quota for your IP. Consider adding a GitHub token with --token=<token> option.";
+            return false;
+        }
+
+        return true;
+    }
+}
 
 r_base::r_base(std::string_view author,
         std::string_view name,
@@ -25,6 +77,7 @@ r_base::r_base(std::string_view author,
         std::optional<std::string_view> token,
         bool create_dir)
     : data(author, name, branch, folder), token(token), worker_pool_(4) {
+        
     if (create_dir) {
         if (fs::exists(folder)) {
             if (!fs::is_empty(folder)) {
@@ -54,9 +107,12 @@ r_github::r_github(std::string_view author,
             std::string_view branch,
             std::string_view folder,
             std::optional<std::string_view> token,
-        bool create_dir)
-    : r_base(author, name, branch, preprocess_folder(folder), token, create_dir) {
-    url_ = std::format("https://api.github.com/repos/{}/{}/contents/{}?ref={}", author, name, folder, branch);
+        bool create_dir,
+    bool from_zip)
+    : r_base(author, name, branch, preprocess_folder(folder), token, create_dir), from_zip(from_zip), full_path(folder) {
+    url_ = from_zip 
+        ? std::format("https://api.github.com/repos/{}/{}/zipball/{}", author, name, branch)
+        : std::format("https://api.github.com/repos/{}/{}/contents/{}?ref={}", author, name, folder, branch);
 }
 
 void r_github::handle_metadata_request(std::string url) {
@@ -64,22 +120,8 @@ void r_github::handle_metadata_request(std::string url) {
         ? cpr::Get(cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)})
         : cpr::Get(cpr::Url{std::move(url)});
 
-    if (r.status_code == 0) {
-        std::cerr << "\nError: " << r.error.message << '\n';
-        exit(1);
-    } else if (r.status_code == 404) {
-        std::cerr << "\nServer returned 404: does not exist. Check again if the repository URL is correct or you have access rights to it.";
-        std::exit(1);
-    } else if (r.status_code == 401) {
-        std::cerr << "\nServer returned 401: autorization required. Check again if the token that you have provided is correct.";
-        std::exit(1);
-    } else if (r.status_code == 403 || r.status_code == 429) {
-        // TODO: write the instructions with what to do in case if quota is over
-        json data = json::parse(r.text);
-        std::cerr << '\n' << data["message"];
-        std::cerr << "\nServer returned 403: not autorized." 
-                     "This might be due to no remaining quota for your IP. Consider adding a GitHub token with --token=<token> option.";
-        std::exit(1);
+    if (!if_response_successful(r)) {
+        exit(-1);
     } else {
         if (r.text.empty()) {
             return;
@@ -131,8 +173,44 @@ void r_github::handle_request(const std::string &name, std::string url, unsigned
     }
 }
 
+void r_github::download_from_zip(std::string url) {
+    std::string temp_file_name = std::format("{}.zip", random_string(10));
+
+    std::ofstream file(temp_file_name, std::ios::binary);
+    if (!file.is_open()) {
+
+        exit(-1);
+    }
+
+    std::cout << "\nDownloading the archive...\n";
+
+    cpr::Response r = token
+        ? cpr::Download(file, cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)})
+        : cpr::Download(file, cpr::Url{std::move(url)});
+    file.close();
+
+    if (!if_response_successful(r)) {
+        exit(-1);
+    }
+    
+    std::cout << "Extracting the archive...";
+
+    try {
+        zip_file zf(temp_file_name);
+        zf.remove_unnecessary_dirs_and_save(full_path);
+        fs::remove(temp_file_name);
+    } catch (const std::exception& e) {
+        std::cerr << e.what();
+        exit(-1);
+    }
+}
+
 void r_github::start() {
-    handle_metadata_request(std::move(url_));
+    if (!from_zip) {
+        handle_metadata_request(std::move(url_));
+    } else {
+        download_from_zip(std::move(url_));
+    }
 }
 
 std::string_view r_github::preprocess_folder(std::string_view folder) {

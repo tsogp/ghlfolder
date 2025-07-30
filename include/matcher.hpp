@@ -8,7 +8,7 @@
 #include <string_view>
 
 namespace matcher {
-std::unique_ptr<r_base> get_repo_data(std::string_view url, bool create_dir = false, std::optional<std::string_view> token = std::nullopt);
+std::unique_ptr<r_base> get_repo_data(std::string_view url, bool create_dir = false, std::optional<std::string_view> token = std::nullopt, bool from_zip = false);
 } // namespace matcher
 
 #endif // __MATCHER_HPP__

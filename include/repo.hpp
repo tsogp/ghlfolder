@@ -53,15 +53,18 @@ public:
              std::string_view branch,
              std::string_view folder,
              std::optional<std::string_view> token,
-            bool create_dir = false);
+            bool create_dir = false,
+        bool from_zip = false);
 
     void handle_metadata_request(std::string url);
     void handle_request(const std::string &name, std::string url, unsigned int file_size);
     void start() override;
+    void download_from_zip(std::string url);
 private:
     // Position where the relative path of the cloned subfolder begins
     std::size_t pathb_idx_;
-
+    std::string_view full_path;
+    bool from_zip;
     std::string_view preprocess_folder(std::string_view folder);
 };
 

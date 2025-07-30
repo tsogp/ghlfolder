@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Create directory of subfolder name only if output_dir is not passed
-        auto repo = matcher::get_repo_data(raw_url, !is_non_standard_dir, token);
+        auto repo = matcher::get_repo_data(raw_url, !is_non_standard_dir, token, from_zip);
         repo->start();
         repo->wait_for_all();
     } catch (const fs::filesystem_error &e) {

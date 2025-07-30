@@ -9,6 +9,7 @@ bool got_not_null_cols();
 int get_width();
 void hide_cursor();
 void show_cursor();
+void clear_line();
 }; // namespace term_data
 
 #endif // __TERM_HPP__

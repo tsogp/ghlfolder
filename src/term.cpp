@@ -4,7 +4,6 @@
 #include <unistd.h>
 
 namespace term_data {
-// TODO: fix to use interrupts to do the syscall
 int get_width() {
     winsize size{};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
@@ -28,4 +27,9 @@ void hide_cursor() {
 void show_cursor() {
     std::cout << "\033[?25h";
 }
+
+void clear_line() { 
+    std::cout << "\033[2K"; 
+}
+
 }; // namespace term_data
