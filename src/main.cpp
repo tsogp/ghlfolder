@@ -37,6 +37,11 @@ int main(int argc, char *argv[]) {
     program.add_argument("--token")
         .help("GitHub or GitLab token");
 
+    program.add_argument("--from_zip")
+        .default_value(false)
+        .implicit_value(true)
+        .help("Download the full zip archive of the repository and the only keep the required folder");
+
     try {
         program.parse_args(argc, argv);
 
@@ -55,6 +60,7 @@ int main(int argc, char *argv[]) {
         std::string raw_url = program.get("url");
         std::string output_dir = program.get("output_dir");
         std::optional<std::string> token = program.present("token");
+        bool from_zip = program.get<bool>("--from_zip");
 
         bool is_non_standard_dir = output_dir != ".";
         if (is_non_standard_dir) {
