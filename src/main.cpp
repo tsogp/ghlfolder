@@ -1,6 +1,9 @@
+#include "bar_pool.hpp"
+#include "fetch_bar.hpp"
 #include "matcher.hpp"
 #include "term.hpp"
 #include <argparse/argparse.hpp>
+#include <chrono>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -8,6 +11,7 @@
 #include <memory>
 #include <optional>
 #include <sys/ioctl.h>
+#include <thread>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
@@ -93,6 +97,26 @@ int main(int argc, char *argv[]) {
         std::cerr << program;
         std::exit(1);
     }
+
+    // bar_pool pool_;
+
+    // for (int i = 0; i < 4; ++i) {
+    //     pool_.push_back(std::make_unique<fetch_bar>(std::format("Bar {}", i), 100000));
+    // }
+
+    // auto tick = [&](int i) {
+    //     while (!pool_.is_i_complete(i)) {
+    //         pool_.tick_i(i, 0.05 * (i + 0.01));
+    //         std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    //     }
+    // };
+
+    // std::jthread t1(tick, 0);
+    // std::jthread t2(tick, 1);
+    // std::jthread t3(tick, 2);
+    // std::jthread t4(tick, 3);
+
+    // std::this_thread::sleep_for(std::chrono::seconds(20));
 
     std::cout << "\nDone.\n";
     term_data::show_cursor();

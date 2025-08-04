@@ -58,7 +58,6 @@ void bar_pool::tick_i(std::size_t index, double progress) {
     // Push the completed bar into bottom and non-completed to the top
     auto* oldest = *current_rows.begin();
     if (bars_[index]->is_complete() && bars_[index]->get_row_idx() > oldest->get_row_idx()) {
-        // swap here
         move_cursor_down(offset);
         
         std::size_t oldest_active_bar_offset = total_bars_ - oldest->get_row_idx();
@@ -68,9 +67,14 @@ void bar_pool::tick_i(std::size_t index, double progress) {
         move_cursor_down(oldest_active_bar_offset);
         move_cursor_up(offset);
         oldest->display(false);
-        oldest->set_row_idx(bars_[index]->get_row_idx());
-        
+
         current_rows.erase(bars_[index].get());
+        current_rows.erase(oldest);
+
+        oldest->set_row_idx(bars_[index]->get_row_idx());
+        if (!oldest->is_complete()) {
+            current_rows.insert(oldest);
+        }
     }
 
     move_cursor_down(offset);
@@ -79,4 +83,12 @@ void bar_pool::tick_i(std::size_t index, double progress) {
 bool bar_pool::is_i_complete(std::size_t index) {
     std::scoped_lock lck(mutex_);
     return bars_[index]->is_complete();
+}
+
+bar_pool::~bar_pool() {
+    for (const auto& bar: bars_) {
+        if (!bar->is_complete()) {
+            bar->tick(1);
+        }
+    }
 }

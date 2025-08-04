@@ -26,7 +26,7 @@ void progress_bar<MIN_WIDTH, MAX_WIDTH>::tick(double step) {
     }
 
     progress_ = std::min(progress_ + step, 1.0);
-    int new_pos = static_cast<int>(floor(width_ * progress_));
+    int new_pos = static_cast<int>(ceil(width_ * progress_));
     int char_progress = new_pos - pos_;
 
     std::cout << "\033[" << width_ - pos_ - 1 + BAR_POSTFIX_SIZE << "D";

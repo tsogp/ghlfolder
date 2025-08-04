@@ -20,6 +20,7 @@ public:
     bar_pool(bar_pool &&bp) = delete;
     bar_pool &operator=(const bar_pool &bp) = delete;
     bar_pool &operator=(bar_pool &&bp) = delete;
+    ~bar_pool();
 
     template <typename... Bars>
     explicit bar_pool(Bars &&...bars);
