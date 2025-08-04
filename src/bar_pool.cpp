@@ -1,5 +1,6 @@
 #include "bar_pool.hpp"
 #include "fetch_bar.hpp"
+#include "term.h"
 #include <iostream>
 #include <algorithm>
 #include <cstddef>
@@ -10,16 +11,18 @@
 namespace {
     void move_cursor_up(std::size_t l) {
         if (l != 0) {
-            // TODO: think of a way to remove this offset
-            std::cout << "\033[" << 1 << "C";
+#ifdef _WIN32
+            enable_virtual_terminal();
+#endif
             std::cout << "\033[" << l << "A";
         }
     }
-
+    
     void move_cursor_down(std::size_t l) {
         if (l != 0) {
-            // TODO: think of a way to remove this offset
-            std::cout << "\033[" << 1 << "C";
+#ifdef _WIN32
+            enable_virtual_terminal();
+#endif
             std::cout << "\033[" << l << "B";
         }
     }
