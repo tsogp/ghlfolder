@@ -16,6 +16,7 @@ public:
     explicit progress_bar(int width);
     void init_bar();
     void tick(double step);
+    void draw();
     void resize(int new_width, bool reinit = false);
     [[nodiscard]] bool is_complete() const;
 private:

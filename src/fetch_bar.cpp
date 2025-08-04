@@ -8,6 +8,7 @@
 #include <string_view>
 #include <array>
 #include <sys/ioctl.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 namespace {
@@ -50,17 +51,34 @@ void fetch_bar::update_layout() {
     spacer_width_ = std::max(term_width - (name_width_ + _SIZE_WIDTH + progress_width_), 5);
 }
 
-void fetch_bar::display() {
-    std::cout << "\r\n" << std::left << std::setw(name_width_) << truncate(name_, name_width_);
+void fetch_bar::display(bool init) {
+    std::cout << "\r";
+    if (init) {
+        std::cout << "\n";
+    }
+    std::cout << std::left << std::setw(name_width_) << truncate(name_, name_width_);
     std::cout << std::setw(spacer_width_) << "";
     std::cout << std::right << std::setw(_SIZE_WIDTH) << print_size(file_size);
-    progress_.init_bar();
+    if (init) {
+        progress_.init_bar();
+    } else {
+        progress_.draw();
+    }
 }
 
 void fetch_bar::tick(double step) {
     progress_.tick(step);
 }
 
+
 bool fetch_bar::is_complete() const {
     return progress_.is_complete();
+}
+
+void fetch_bar::set_row_idx(uint row_idx) {
+    this->row_idx = row_idx;
+}
+
+uint fetch_bar::get_row_idx() const {
+    return row_idx;
 }

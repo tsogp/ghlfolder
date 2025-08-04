@@ -31,11 +31,19 @@ template <typename... Bars>
 bar_pool::bar_pool(Bars &&...bars) {
     (bars_.emplace_back(std::move(bars)), ...);
     total_bars_ = bars_.size();
-    std::for_each(bars_.begin(), bars_.end(), [](const auto &bar) { bar->display(); });
+    size_t idx = 1;
+    for (auto it = bars_.begin(); it != bars_.end(); ++it, ++idx) {
+        (*it)->set_row_idx(idx);
+        current_rows.insert((*it).get());
+        (*it)->display();
+    }
 }
 
 std::size_t bar_pool::push_back(std::unique_ptr<fetch_bar> bar) {
     std::scoped_lock lck(mutex_);
+    // Set the row index to the bar
+    bar->set_row_idx(total_bars_ + 1);
+    current_rows.insert(bar.get());
     bar->display();
     bars_.push_back(std::move(bar));
     return total_bars_++;
@@ -43,9 +51,28 @@ std::size_t bar_pool::push_back(std::unique_ptr<fetch_bar> bar) {
 
 void bar_pool::tick_i(std::size_t index, double progress) {
     std::scoped_lock lck(mutex_);
-    std::size_t offset = total_bars_ - 1 - index;
+    std::size_t offset = total_bars_ - bars_[index]->get_row_idx();
     move_cursor_up(offset);
     bars_[index]->tick(progress);
+
+    // Push the completed bar into bottom and non-completed to the top
+    auto* oldest = *current_rows.begin();
+    if (bars_[index]->is_complete() && bars_[index]->get_row_idx() > oldest->get_row_idx()) {
+        // swap here
+        move_cursor_down(offset);
+        
+        std::size_t oldest_active_bar_offset = total_bars_ - oldest->get_row_idx();
+        move_cursor_up(oldest_active_bar_offset);
+        bars_[index]->display(false);
+        
+        move_cursor_down(oldest_active_bar_offset);
+        move_cursor_up(offset);
+        oldest->display(false);
+        oldest->set_row_idx(bars_[index]->get_row_idx());
+        
+        current_rows.erase(bars_[index].get());
+    }
+
     move_cursor_down(offset);
 }
 

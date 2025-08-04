@@ -12,9 +12,7 @@ progress_bar<MIN_WIDTH, MAX_WIDTH>::progress_bar(int width) : width_(std::clamp(
 template <int MIN_WIDTH, int MAX_WIDTH>
 void progress_bar<MIN_WIDTH, MAX_WIDTH>::init_bar() {
     if (!is_initiated) {
-        std::cout << "[" << std::setw(pos_) << std::setfill('#') << "";
-        std::cout << std::setw(width_ - pos_) << std::setfill(' ') << "";
-        std::cout << ']' << std::right << std::setw(5) << std::setfill(' ') << static_cast<int>(ceil(progress_ * 100.0)) << "%";
+        draw();
         is_initiated = true;
     }
 }
@@ -48,6 +46,13 @@ void progress_bar<MIN_WIDTH, MAX_WIDTH>::resize(int new_width, bool reinit) {
     if (reinit) {
         init_bar();
     }
+}
+
+template <int MIN_WIDTH, int MAX_WIDTH>
+void progress_bar<MIN_WIDTH, MAX_WIDTH>::draw() {
+    std::cout << "[" << std::setw(pos_) << std::setfill('#') << "";
+    std::cout << std::setw(width_ - pos_) << std::setfill(' ') << "";
+    std::cout << ']' << std::right << std::setw(5) << std::setfill(' ') << static_cast<int>(ceil(progress_ * 100.0)) << "%";
 }
 
 template <int MIN_WIDTH, int MAX_WIDTH>

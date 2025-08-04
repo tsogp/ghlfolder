@@ -5,7 +5,14 @@
 #include <cstddef>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <vector>
+
+struct compate_by_row_idx {
+    bool operator()(const fetch_bar* a, const fetch_bar* b) const {
+        return a->get_row_idx() < b->get_row_idx();
+    }
+};
 
 class bar_pool {
 public:
@@ -22,6 +29,7 @@ public:
 private:
     std::mutex mutex_;
     std::vector<std::unique_ptr<fetch_bar>> bars_;
+    std::set<fetch_bar*, compate_by_row_idx> current_rows;
     std::size_t total_bars_{};
     bool started_{};
 };

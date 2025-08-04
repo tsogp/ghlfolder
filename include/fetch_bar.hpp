@@ -17,8 +17,10 @@ public:
     fetch_bar &operator=(const fetch_bar &b) = default;
 
     void update_layout();
-    void display();
+    void set_row_idx(uint row_idx);
+    void display(bool init = true);
     void tick(double step);
+    [[nodiscard]] uint get_row_idx() const;
     [[nodiscard]] bool is_complete() const;
 
 private:
@@ -26,6 +28,7 @@ private:
     int name_width_ = 5;
     int spacer_width_ = 5;
     int progress_width_ = 10;
+    uint row_idx = 0;
     progress_bar<> progress_;
     
     unsigned int file_size;
