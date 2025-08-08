@@ -13,6 +13,7 @@ add_executable(${PROJECT_NAME}
     src/bar_pool.cpp
     src/progress_bar.cpp
     src/zip_file.cpp
+    src/utils.cpp
 )
 target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
 target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)

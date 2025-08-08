@@ -2,8 +2,10 @@
 #include "fetch_bar.hpp"
 #include "matcher.hpp"
 #include "term.hpp"
+#include "utils.hpp"
 #include <argparse/argparse.hpp>
 #include <chrono>
+#include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -28,6 +30,7 @@ bool is_writable(const std::string &path) {
 }
 
 int main(int argc, char *argv[]) {
+    std::atexit(utils::global_cleanup);
     term_data::hide_cursor();
 
     argparse::ArgumentParser program("ghlfolder");
@@ -72,14 +75,14 @@ int main(int argc, char *argv[]) {
                 if (!fs::is_empty(output_dir)) {
                     std::cerr << std::format("Error: output directory '{}' already exists and it is not empty.\n",
                                              output_dir);
-                    exit(1);
+                    std::exit(1);
                 }
             } else if (!fs::is_directory(output_dir)) {
                 std::cerr << std::format("Error: '{}' is not a directory.\n", output_dir);
-                exit(1);
+                std::exit(1);
             } else if (!is_writable(output_dir)) {
                 std::cerr << std::format("Error: output directory '{}' is not writable.\n", output_dir);
-                exit(1);
+                std::exit(1);
             }
 
             fs::current_path(output_dir);

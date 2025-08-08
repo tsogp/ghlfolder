@@ -82,11 +82,11 @@ r_base::r_base(std::string_view author,
         if (fs::exists(folder)) {
             if (!fs::is_empty(folder)) {
                 std::cerr << std::format("Error: output directory '{}' already exists and it is not empty.\n", folder);
-                exit(1);
+                std::exit(1);
             }
         } else if (!fs::create_directory(folder)) {
             std::cerr << std::format("Error: couldn't create directory {}", folder);
-            exit(1);
+            std::exit(1);
         }
 
         fs::current_path(folder);
@@ -121,7 +121,7 @@ void r_github::handle_metadata_request(std::string url) {
         : cpr::Get(cpr::Url{std::move(url)});
 
     if (!if_response_successful(r)) {
-        exit(-1);
+        std::exit(-1);
     } else {
         if (r.text.empty()) {
             return;
@@ -179,7 +179,7 @@ void r_github::download_from_zip(std::string url) {
     std::ofstream file(temp_file_name, std::ios::binary);
     if (!file.is_open()) {
 
-        exit(-1);
+        std::exit(-1);
     }
 
     std::cout << "\nDownloading the archive...\n";
@@ -190,7 +190,7 @@ void r_github::download_from_zip(std::string url) {
     file.close();
 
     if (!if_response_successful(r)) {
-        exit(-1);
+        std::exit(-1);
     }
     
     std::cout << "Extracting the archive...";
@@ -201,7 +201,7 @@ void r_github::download_from_zip(std::string url) {
         fs::remove(temp_file_name);
     } catch (const std::exception& e) {
         std::cerr << e.what();
-        exit(-1);
+        std::exit(-1);
     }
 }
 
