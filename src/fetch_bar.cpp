@@ -1,12 +1,10 @@
 #include "fetch_bar.hpp"
 #include "term.hpp"
 #include <algorithm>
-#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <string>
-#include <string_view>
-#include <array>
+#include "utils.hpp"
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -17,22 +15,6 @@ namespace {
             return str.substr(0, max_length - 3) + "...";
         }
         return str;
-    }
-
-    std::string print_size(unsigned int bytes) {
-        static constexpr std::array<std::string_view, 4> units = {"B", "KB", "MB", "GB"}; 
-        double size = bytes;
-        int unitIndex = 0;
-
-        while (size >= 1024 && unitIndex < 3) {
-            size /= 1024;
-            ++unitIndex;
-        }
-
-        std::ostringstream oss;
-        oss << std::fixed << std::setprecision(1) << size << " " << units[unitIndex] << " ";
-
-        return oss.str();
     }
 }
 
@@ -47,8 +29,8 @@ void fetch_bar::update_layout() {
 
     name_width_ = std::clamp(static_cast<int>(name_.size()), 5, 70);
     progress_width_ =
-        std::clamp(term_width - name_width_ - _SIZE_WIDTH - 5, BAR_MIN_WIDTH, BAR_MAX_WIDTH);
-    spacer_width_ = std::max(term_width - (name_width_ + _SIZE_WIDTH + progress_width_), 5);
+        std::clamp(term_width - name_width_ - FETCH_BAR_SIZE_WIDTH - 5, BAR_MIN_WIDTH, BAR_MAX_WIDTH);
+    spacer_width_ = std::max(term_width - (name_width_ + FETCH_BAR_SIZE_WIDTH + progress_width_), 5);
 }
 
 void fetch_bar::display(bool init) {
@@ -58,7 +40,7 @@ void fetch_bar::display(bool init) {
     }
     std::cout << std::left << std::setw(name_width_) << truncate(name_, name_width_);
     std::cout << std::setw(spacer_width_) << "";
-    std::cout << std::right << std::setw(_SIZE_WIDTH) << print_size(file_size);
+    std::cout << std::right << std::setw(FETCH_BAR_SIZE_WIDTH) << utils::print_size(file_size);
     if (init) {
         progress_.init_bar();
     } else {

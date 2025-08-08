@@ -1,32 +1,11 @@
 #include "bar_pool.hpp"
 #include "fetch_bar.hpp"
-#include "term.h"
-#include <iostream>
+#include "term.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <mutex>
 #include <vector>
-
-namespace {
-    void move_cursor_up(std::size_t l) {
-        if (l != 0) {
-#ifdef _WIN32
-            enable_virtual_terminal();
-#endif
-            std::cout << "\033[" << l << "A";
-        }
-    }
-    
-    void move_cursor_down(std::size_t l) {
-        if (l != 0) {
-#ifdef _WIN32
-            enable_virtual_terminal();
-#endif
-            std::cout << "\033[" << l << "B";
-        }
-    }
-};
 
 template bar_pool::bar_pool();
 
@@ -55,20 +34,20 @@ std::size_t bar_pool::push_back(std::unique_ptr<fetch_bar> bar) {
 void bar_pool::tick_i(std::size_t index, double progress) {
     std::scoped_lock lck(mutex_);
     std::size_t offset = total_bars_ - bars_[index]->get_row_idx();
-    move_cursor_up(offset);
+    term_data::move_cursor_up(offset);
     bars_[index]->tick(progress);
 
     // Push the completed bar into bottom and non-completed to the top
     auto* oldest = *current_rows.begin();
     if (bars_[index]->is_complete() && bars_[index]->get_row_idx() > oldest->get_row_idx()) {
-        move_cursor_down(offset);
+        term_data::move_cursor_down(offset);
         
         std::size_t oldest_active_bar_offset = total_bars_ - oldest->get_row_idx();
-        move_cursor_up(oldest_active_bar_offset);
+        term_data::move_cursor_up(oldest_active_bar_offset);
         bars_[index]->display(false);
         
-        move_cursor_down(oldest_active_bar_offset);
-        move_cursor_up(offset);
+        term_data::move_cursor_down(oldest_active_bar_offset);
+        term_data::move_cursor_up(offset);
         oldest->display(false);
 
         current_rows.erase(bars_[index].get());
@@ -80,7 +59,7 @@ void bar_pool::tick_i(std::size_t index, double progress) {
         }
     }
 
-    move_cursor_down(offset);
+    term_data::move_cursor_down(offset);
 }
 
 bool bar_pool::is_i_complete(std::size_t index) {

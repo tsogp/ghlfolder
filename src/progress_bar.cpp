@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include "term.hpp"
 
 template <int MIN_WIDTH, int MAX_WIDTH>
 progress_bar<MIN_WIDTH, MAX_WIDTH>::progress_bar(int width) : width_(std::clamp(width, MIN_WIDTH, MAX_WIDTH) - (BAR_POSTFIX_SIZE + 1)) {}
@@ -29,9 +30,9 @@ void progress_bar<MIN_WIDTH, MAX_WIDTH>::tick(double step) {
     int new_pos = static_cast<int>(ceil(width_ * progress_));
     int char_progress = new_pos - pos_;
 
-    std::cout << "\033[" << width_ - pos_ - 1 + BAR_POSTFIX_SIZE << "D";
+    term_data::move_cursor_left(width_ - pos_ - 1 + BAR_POSTFIX_SIZE);
     std::cout << std::setw(char_progress) << std::setfill('#') << "";
-    std::cout << "\033[" << (width_ - new_pos + 1) << "C";
+    term_data::move_cursor_right(width_ - new_pos + 1);
     std::cout << std::setw(5) << std::setfill(' ') << static_cast<int>(ceil(progress_ * 100.0)) << "%";
     std::cout.flush();
 

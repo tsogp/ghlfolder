@@ -65,4 +65,53 @@ void clear_line() {
     std::cout << "\033[2K";
 }
 
+void move_cursor_up(std::size_t l) {
+    if (l != 0) {
+#ifdef _WIN32
+        enable_virtual_terminal();
+#endif
+        std::cout << "\033[" << l << "A";
+    }
+}
+
+void move_cursor_down(std::size_t l) {
+    if (l != 0) {
+#ifdef _WIN32
+        enable_virtual_terminal();
+#endif
+        std::cout << "\033[" << l << "B";
+    }
+}
+
+void move_cursor_left(std::size_t count) {
+#ifdef _WIN32
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hOut, &csbi);
+
+    COORD newPos = csbi.dwCursorPosition;
+    newPos.X = std::max<SHORT>(0, newPos.X - static_cast<SHORT>(count));
+    SetConsoleCursorPosition(hOut, newPos);
+#else
+    if (count != 0) {
+        std::cout << "\033[" << count << "D";
+    }
+#endif
+}
+
+void move_cursor_right(std::size_t count) {
+#ifdef _WIN32
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hOut, &csbi);
+
+    COORD newPos = csbi.dwCursorPosition;
+    newPos.X += static_cast<SHORT>(count);
+    SetConsoleCursorPosition(hOut, newPos);
+#else
+    if (count != 0) {
+        std::cout << "\033[" << count << "C";
+    }
+#endif
+}
 } // namespace term_data

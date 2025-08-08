@@ -5,6 +5,7 @@
 
 namespace utils {
     void global_cleanup();
+    std::string print_size(unsigned int bytes);
 }
 
 #endif // __UTILS_HPP__

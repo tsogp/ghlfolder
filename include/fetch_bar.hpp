@@ -6,6 +6,8 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+constexpr int FETCH_BAR_SIZE_WIDTH = 10;
+
 class fetch_bar {
 public:
     explicit fetch_bar(std::string name, unsigned int file_size);
@@ -32,8 +34,6 @@ private:
     progress_bar<> progress_;
     
     unsigned int file_size;
-
-    static constexpr int _SIZE_WIDTH = 10;
 };
 
 #endif // __FETCH_BAR_HPP__

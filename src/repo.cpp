@@ -2,6 +2,9 @@
 #include "bar_pool.hpp"
 #include "fetch_bar.hpp"
 #include "thread_pool.hpp"
+#include "fetch_bar.hpp"
+#include "utils.hpp"
+#include "term.hpp"
 #include "zip_file.hpp"
 #include <cpr/api.h>
 #include <cpr/bearer.h>
@@ -15,9 +18,9 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <random>
-#include <stdexcept>
 #include <string>
 #include <string_view>
+
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -182,18 +185,31 @@ void r_github::download_from_zip(std::string url) {
         std::exit(-1);
     }
 
-    std::cout << "\nDownloading the archive...\n";
+    std::cout << "\nDownloaded";
+
+    auto print_progress = cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
+        cpr::cpr_off_t downloadNow,
+        cpr::cpr_off_t uploadTotal,
+        cpr::cpr_off_t uploadNow,
+        intptr_t userdata) -> bool {
+            std::cout << std::right << std::setw(FETCH_BAR_SIZE_WIDTH) << utils::print_size(downloadNow);
+            std::cout << "...";
+            term_data::move_cursor_left(FETCH_BAR_SIZE_WIDTH + 3);
+            return true;
+        }
+    );
+
 
     cpr::Response r = token
-        ? cpr::Download(file, cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)})
-        : cpr::Download(file, cpr::Url{std::move(url)});
+        ? cpr::Download(file, cpr::Url{std::move(url)}, print_progress, cpr::Bearer{std::string(*token)})
+        : cpr::Download(file, cpr::Url{std::move(url)}, print_progress);
     file.close();
 
     if (!if_response_successful(r)) {
         std::exit(-1);
     }
     
-    std::cout << "Extracting the archive...";
+    std::cout << "\nDone.\nExtracting the archive...";
 
     try {
         zip_file zf(temp_file_name);
