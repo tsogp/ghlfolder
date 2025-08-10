@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.14.0)
 set(PROJECT_NAME ghlfolder)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 project(${PROJECT_NAME} VERSION 0.1.0 LANGUAGES C CXX)
 
 add_executable(${PROJECT_NAME}

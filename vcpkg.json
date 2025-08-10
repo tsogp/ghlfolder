@@ -1,0 +1,11 @@
+{
+    "name": "ghlfolder",
+    "version": "1.0.0",
+    "dependencies": [
+        "curl",
+        "cpr",
+        "ctre",
+        "nlohmann-json",
+        "libzip"
+    ]
+}
