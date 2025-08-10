@@ -25,7 +25,7 @@ namespace {
         stop_requested = true;
 
         if (repo) {
-            repo->worker_pool_.stop_all();
+            repo->stop();
         }
     }
     
@@ -125,7 +125,6 @@ int main(int argc, char *argv[]) {
         }
 
         repo->start();
-        repo->worker_pool_.wait_for_all();
 
         if (stop_requested) {
             fs::current_path("..");

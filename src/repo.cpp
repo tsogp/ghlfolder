@@ -192,6 +192,10 @@ void r_github::download_from_zip(std::string url) {
         cpr::cpr_off_t uploadTotal,
         cpr::cpr_off_t uploadNow,
         intptr_t userdata) -> bool {
+            if (stop_requested) {
+                return false;
+            }
+
             std::cout << std::right << std::setw(FETCH_BAR_SIZE_WIDTH) << utils::print_size(downloadNow);
             std::cout << "...";
             term_data::move_cursor_left(FETCH_BAR_SIZE_WIDTH + 3);
@@ -199,11 +203,14 @@ void r_github::download_from_zip(std::string url) {
         }
     );
 
-
     cpr::Response r = token
         ? cpr::Download(file, cpr::Url{std::move(url)}, print_progress, cpr::Bearer{std::string(*token)})
         : cpr::Download(file, cpr::Url{std::move(url)}, print_progress);
     file.close();
+
+    if (stop_requested) {
+        return;
+    }
 
     if (!if_response_successful(r)) {
         std::exit(-1);
@@ -224,8 +231,16 @@ void r_github::download_from_zip(std::string url) {
 void r_github::start() {
     if (!from_zip) {
         handle_metadata_request(std::move(url_));
+        worker_pool_.wait_for_all();
     } else {
         download_from_zip(std::move(url_));
+    }
+}
+
+void r_github::stop() {
+    stop_requested = true;
+    if (!from_zip) {
+        worker_pool_.stop_all();
     }
 }
 

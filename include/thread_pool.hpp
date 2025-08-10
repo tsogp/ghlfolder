@@ -18,17 +18,19 @@ public:
 
     void push_job(std::packaged_task<bool(std::stop_token)> job);
     bool stop_all();
-    void wait_for_all();
-    size_t jobs_in_progress_ = 0;
-    std::deque<std::packaged_task<bool(std::stop_token)>> pending_jobs_;
 private:
     std::vector<std::jthread> pool_;
     std::atomic_bool is_active_{true};
     std::condition_variable cv_, out_of_work_;
     std::mutex mutex_;
-
-
+    size_t jobs_in_progress_ = 0;
+    std::deque<std::packaged_task<bool(std::stop_token)>> pending_jobs_;
+    
+    void wait_for_all();
     void run(std::stop_token stoken) noexcept;
+
+    friend class r_base;
+    friend class r_github;
 };
 
 #endif // __THREAD_POOL_HPP__

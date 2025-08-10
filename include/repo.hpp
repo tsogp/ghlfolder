@@ -41,6 +41,7 @@ public:
     r_base &operator=(r_base &&br) = default;
 
     virtual void start() = 0;
+    virtual void stop() = 0;
     virtual ~r_base() = default;
 };
 
@@ -57,6 +58,7 @@ public:
     void handle_metadata_request(std::string url);
     bool handle_request(const std::string &name, std::string url, unsigned int file_size, std::stop_token stoken);
     void start() override;
+    void stop() override;
     void download_from_zip(std::string url);
 private:
     // Position where the relative path of the cloned subfolder begins
@@ -64,6 +66,7 @@ private:
     std::string_view full_path;
     bool from_zip;
     std::string_view preprocess_folder(std::string_view folder);
+    std::atomic<bool> stop_requested = false;
 };
 
 class r_gitlab : public r_base {
