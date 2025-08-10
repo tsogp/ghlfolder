@@ -20,7 +20,7 @@ struct r_data {
 
 class r_base {
 public:
-    std::vector<std::future<void>> futures_;
+    std::vector<std::future<bool>> futures_;
     thread_pool worker_pool_;
     bar_pool bar_pool_;
     std::string url_;
@@ -42,8 +42,6 @@ public:
 
     virtual void start() = 0;
     virtual ~r_base() = default;
-
-    void wait_for_all();
 };
 
 class r_github : public r_base {
@@ -57,7 +55,7 @@ public:
         bool from_zip = false);
 
     void handle_metadata_request(std::string url);
-    void handle_request(const std::string &name, std::string url, unsigned int file_size);
+    bool handle_request(const std::string &name, std::string url, unsigned int file_size, std::stop_token stoken);
     void start() override;
     void download_from_zip(std::string url);
 private:

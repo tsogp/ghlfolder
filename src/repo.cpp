@@ -2,7 +2,6 @@
 #include "bar_pool.hpp"
 #include "fetch_bar.hpp"
 #include "thread_pool.hpp"
-#include "fetch_bar.hpp"
 #include "utils.hpp"
 #include "term.hpp"
 #include "zip_file.hpp"
@@ -99,12 +98,6 @@ r_base::r_base(std::string_view author,
     };
 }
 
-void r_base::wait_for_all() {
-    for (auto &f : futures_) {
-        f.wait();
-    }
-}
-
 r_github::r_github(std::string_view author,
             std::string_view name,
             std::string_view branch,
@@ -135,10 +128,12 @@ void r_github::handle_metadata_request(std::string url) {
             // TODO: fix to avoid copying
             std::string trimmed_path = it["path"].template get<std::string>().substr(pathb_idx_);
             if (it["type"] == "file") {
-                auto task = std::packaged_task<void()>(
-                    [name = trimmed_path, url = it["download_url"], file_size = it["size"], this] {
-                        handle_request(name, url, file_size);
-                    });
+                auto task = std::packaged_task<bool(std::stop_token)>(
+                    [name = trimmed_path, url = it["download_url"], file_size = it["size"], this](std::stop_token stoken) {
+                        return handle_request(name, url, file_size, stoken); 
+                    }
+                );
+                
                 auto fut = task.get_future();
                 futures_.emplace_back(std::move(fut));
                 worker_pool_.push_job(std::move(task));
@@ -150,16 +145,19 @@ void r_github::handle_metadata_request(std::string url) {
     }
 }
 
-void r_github::handle_request(const std::string &name, std::string url, unsigned int file_size) {
+bool r_github::handle_request(const std::string &name, std::string url, unsigned int file_size, std::stop_token stoken) {
     std::ofstream of(name, std::ios::binary);
     const std::size_t idx = bar_pool_.push_back(std::make_unique<fetch_bar>(name, file_size));
     unsigned int downloaded = 0;
 
-    auto callback = cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
-        cpr::cpr_off_t downloadNow,
-        cpr::cpr_off_t uploadTotal,
-        cpr::cpr_off_t uploadNow,
-        intptr_t userdata) -> bool {
+    auto callback = cpr::ProgressCallback(
+        [&](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow,
+            cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow,
+            intptr_t userdata) -> bool {
+            if (stoken.stop_requested()) {
+                return false;
+            }
+
             bar_pool_.tick_i(idx, (static_cast<double>(downloadNow) - downloaded) / file_size);
             downloaded = downloadNow;
             return true;
@@ -174,6 +172,8 @@ void r_github::handle_request(const std::string &name, std::string url, unsigned
     if (downloaded < file_size) {
         bar_pool_.tick_i(idx, (static_cast<double>(file_size) - downloaded) / file_size);
     }
+
+    return !stoken.stop_requested();
 }
 
 void r_github::download_from_zip(std::string url) {

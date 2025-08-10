@@ -1,10 +1,9 @@
-#include "bar_pool.hpp"
-#include "fetch_bar.hpp"
 #include "matcher.hpp"
+#include "repo.hpp"
 #include "term.hpp"
 #include "utils.hpp"
 #include <argparse/argparse.hpp>
-#include <chrono>
+#include <csignal>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
@@ -13,24 +12,49 @@
 #include <memory>
 #include <optional>
 #include <sys/ioctl.h>
-#include <thread>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
 
-bool is_writable(const std::string &path) {
-    auto test_file = fs::path(path) / "tempfile";
-    std::ofstream ofs(test_file);
-    if (!ofs) {
-        return false;
+namespace {
+    std::atomic<bool> stop_requested = false;
+    std::optional<std::string> folder_to_delete;
+    std::unique_ptr<r_base> repo = nullptr;
+
+    void signal_handler(int signum) {
+        stop_requested = true;
+
+        if (repo) {
+            repo->worker_pool_.stop_all();
+        }
+    }
+    
+    void handle_deadly_signals() {
+        struct sigaction sa{};
+        sa.sa_handler = signal_handler;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+        
+        if (sigaction(SIGINT, &sa, nullptr) == -1 || sigaction(SIGTERM, &sa, nullptr) == -1) {
+            std::exit(1);
+        }
     }
 
-    fs::remove(test_file);
-    return true;
-}
+    bool is_writable(const std::string &path) {
+        auto test_file = fs::path(path) / "tempfile";
+        std::ofstream ofs(test_file);
+        if (!ofs) {
+            return false;
+        }
+    
+        fs::remove(test_file);
+        return true;
+    }
+};
 
 int main(int argc, char *argv[]) {
     std::atexit(utils::global_cleanup);
+    handle_deadly_signals();
     term_data::hide_cursor();
 
     argparse::ArgumentParser program("ghlfolder");
@@ -85,6 +109,8 @@ int main(int argc, char *argv[]) {
                 std::exit(1);
             }
 
+            folder_to_delete = output_dir;
+
             fs::current_path(output_dir);
 
             // No endline character here because each new fetch bar starts with one
@@ -92,36 +118,31 @@ int main(int argc, char *argv[]) {
         }
 
         // Create directory of subfolder name only if output_dir is not passed
-        auto repo = matcher::get_repo_data(raw_url, !is_non_standard_dir, token, from_zip);
+        repo = matcher::get_repo_data(raw_url, !is_non_standard_dir, token, from_zip);
+
+        if (!is_non_standard_dir) {
+            folder_to_delete = repo->data.folder;
+        }
+
         repo->start();
-        repo->wait_for_all();
+        repo->worker_pool_.wait_for_all();
+
+        if (stop_requested) {
+            fs::current_path("..");
+            fs::remove_all(*folder_to_delete);
+        }
     } catch (const fs::filesystem_error &e) {
         std::cerr << e.what() << '\n';
         std::cerr << program;
         std::exit(1);
     }
 
-    // bar_pool pool_;
+    if (stop_requested) {
+        std::cout << "\nStopping...\n";
+    } else {
+        std::cout << "\nDone.\n";
+    }
 
-    // for (int i = 0; i < 4; ++i) {
-    //     pool_.push_back(std::make_unique<fetch_bar>(std::format("Bar {}", i), 100000));
-    // }
-
-    // auto tick = [&](int i) {
-    //     while (!pool_.is_i_complete(i)) {
-    //         pool_.tick_i(i, 0.05 * (i + 0.01));
-    //         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    //     }
-    // };
-
-    // std::jthread t1(tick, 0);
-    // std::jthread t2(tick, 1);
-    // std::jthread t3(tick, 2);
-    // std::jthread t4(tick, 3);
-
-    // std::this_thread::sleep_for(std::chrono::seconds(20));
-
-    std::cout << "\nDone.\n";
     term_data::show_cursor();
-    return 0;
+    return stop_requested ? 1 : 0;
 }
