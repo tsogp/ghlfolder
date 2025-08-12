@@ -3,8 +3,6 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
-#include <sys/ioctl.h>
-#include <unistd.h>
 #include "term.hpp"
 
 template <int MIN_WIDTH, int MAX_WIDTH>

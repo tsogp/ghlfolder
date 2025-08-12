@@ -11,9 +11,12 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+
+#ifdef _WIN32
+#else
 #include <sys/ioctl.h>
 #include <unistd.h>
-
+#endif
 namespace fs = std::filesystem;
 
 namespace {
@@ -30,14 +33,17 @@ namespace {
     }
     
     void handle_deadly_signals() {
+#ifdef _WIN32
+#else
         struct sigaction sa{};
         sa.sa_handler = signal_handler;
         sigemptyset(&sa.sa_mask);
         sa.sa_flags = 0;
-        
+
         if (sigaction(SIGINT, &sa, nullptr) == -1 || sigaction(SIGTERM, &sa, nullptr) == -1) {
             std::exit(1);
         }
+#endif
     }
 
     bool is_writable(const std::string &path) {

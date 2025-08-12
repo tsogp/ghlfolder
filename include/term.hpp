@@ -2,8 +2,6 @@
 #define __TERM_HPP__
 
 #include <cstddef>
-#include <sys/ioctl.h>
-#include <unistd.h>
 
 namespace term_data {
 bool got_not_null_cols();
