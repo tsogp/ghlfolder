@@ -1,0 +1,11 @@
+{
+  "dependencies" : [ {
+    "name" : "cpr"
+  }, {
+    "name" : "libzip"
+  }, {
+    "name" : "nlohmann-json"
+  }, {
+    "name" : "ctre"
+  } ]
+}

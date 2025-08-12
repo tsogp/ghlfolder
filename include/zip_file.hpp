@@ -4,6 +4,7 @@
 #include "zip.h"
 #include <array>
 #include <cstddef>
+#include <string>
 #include <string_view>
 
 class zip_file {

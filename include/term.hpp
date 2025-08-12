@@ -8,11 +8,10 @@ bool got_not_null_cols();
 int get_width();
 void hide_cursor();
 void show_cursor();
-void clear_line();
-void move_cursor_down(std::size_t l);
-void move_cursor_up(std::size_t l);
-void move_cursor_left(std::size_t count);
-void move_cursor_right(std::size_t count);
+void move_cursor_down(int l);
+void move_cursor_up(int l);
+void move_cursor_left(int l);
+void move_cursor_right(int l);
 }; // namespace term_data
 
 #endif // __TERM_HPP__
