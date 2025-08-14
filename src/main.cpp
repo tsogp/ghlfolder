@@ -169,6 +169,8 @@ int main(int argc, char *argv[]) {
         std::cout << "\nDone.\n";
     }
 
+    repo.reset();
+
     term_data::show_cursor();
     return stop_requested ? 1 : 0;
 }
