@@ -146,6 +146,10 @@ int main(int argc, char *argv[]) {
 
         // Create directory of subfolder name only if output_dir is not passed
         repo = matcher::get_repo_data(raw_url, !is_non_standard_dir, token, from_zip);
+        if (repo == nullptr) {
+            std::cerr << "URL doesn't have the GitHub repository subfolder format. For the whole repositories use git instead.\n";
+            std::exit(1);
+        }
 
         if (!is_non_standard_dir) {
             folder_to_delete = repo->data.folder;

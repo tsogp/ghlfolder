@@ -52,7 +52,7 @@ void zip_file::remove_unnecessary_dirs_and_save(std::string_view folder_to_keep)
                 std::ofstream out(entry_name_str, std::ios::binary);
                 if (!out) {
                     zip_fclose(zip_file);
-                    throw std::runtime_error(std::format("Failed to create output file: {}\n", entry_name_str));
+                    throw std::runtime_error(std::format("\nFailed to create output file: {}\n", entry_name_str));
                 }
 
                 zip_int64_t num_read = 0;
