@@ -3,8 +3,6 @@
 
 #include "progress_bar.hpp"
 #include <string>
-#include <sys/ioctl.h>
-#include <unistd.h>
 
 constexpr int FETCH_BAR_SIZE_WIDTH = 10;
 
@@ -19,10 +17,10 @@ public:
     fetch_bar &operator=(const fetch_bar &b) = default;
 
     void update_layout();
-    void set_row_idx(uint row_idx);
+    void set_row_idx(unsigned int row_idx);
     void display(bool init = true);
     void tick(double step);
-    [[nodiscard]] uint get_row_idx() const;
+    [[nodiscard]] unsigned int get_row_idx() const;
     [[nodiscard]] bool is_complete() const;
 
 private:
@@ -30,7 +28,7 @@ private:
     int name_width_ = 5;
     int spacer_width_ = 5;
     int progress_width_ = 10;
-    uint row_idx = 0;
+    unsigned int row_idx = 0;
     progress_bar<> progress_;
     
     unsigned int file_size;

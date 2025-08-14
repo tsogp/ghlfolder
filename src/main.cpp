@@ -11,9 +11,13 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/ioctl.h>
 #include <unistd.h>
-
+#endif
 namespace fs = std::filesystem;
 
 namespace {
@@ -28,16 +32,39 @@ namespace {
             repo->stop();
         }
     }
-    
+   
+#ifdef _WIN32
+    BOOL WINAPI ConsoleHandler(DWORD eventType) {
+        switch (eventType) {
+        case CTRL_C_EVENT:           // Ctrl + C
+        case CTRL_BREAK_EVENT:       // Ctrl + Break
+        case CTRL_CLOSE_EVENT:       // Closing console window
+        case CTRL_LOGOFF_EVENT:      // User logs off
+        case CTRL_SHUTDOWN_EVENT:    // System shutdown
+            signal_handler(SIGTERM); 
+            return TRUE;
+        default:
+            return FALSE;
+        }
+    }
+#endif
+
+
     void handle_deadly_signals() {
+#ifdef _WIN32
+        if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE)) {
+            std::exit(1);
+        }
+#else
         struct sigaction sa{};
         sa.sa_handler = signal_handler;
         sigemptyset(&sa.sa_mask);
         sa.sa_flags = 0;
-        
+
         if (sigaction(SIGINT, &sa, nullptr) == -1 || sigaction(SIGTERM, &sa, nullptr) == -1) {
             std::exit(1);
         }
+#endif
     }
 
     bool is_writable(const std::string &path) {
@@ -141,6 +168,8 @@ int main(int argc, char *argv[]) {
     } else {
         std::cout << "\nDone.\n";
     }
+
+    repo.reset();
 
     term_data::show_cursor();
     return stop_requested ? 1 : 0;

@@ -35,12 +35,32 @@ bool got_not_null_cols() {
 }
 
 #ifdef _WIN32
-void enable_virtual_terminal() {
+static inline void enable_virtual_terminal() {
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) return;
+
     DWORD dwMode = 0;
-    if (GetConsoleMode(hOut, &dwMode)) {
-        SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-    }
+    if (!GetConsoleMode(hOut, &dwMode)) return;
+
+    // Enable ANSI escape sequences
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+}
+
+// Acknowledgement to https://github.com/p-ranav/indicators/blob/master/include/indicators/cursor_movement.hpp
+static inline void move(int x, int y) {
+    auto hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (!hStdout)
+        return;
+
+    CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+    GetConsoleScreenBufferInfo(hStdout, &csbiInfo);
+
+    COORD cursor;
+
+    cursor.X = csbiInfo.dwCursorPosition.X + x;
+    cursor.Y = csbiInfo.dwCursorPosition.Y + y;
+    SetConsoleCursorPosition(hStdout, cursor);
 }
 #endif
 
@@ -58,60 +78,43 @@ void show_cursor() {
     std::cout << "\033[?25h";
 }
 
-void clear_line() {
-#ifdef _WIN32
-    enable_virtual_terminal();
-#endif
-    std::cout << "\033[2K";
-}
-
-void move_cursor_up(std::size_t l) {
+void move_cursor_up(int l) {
     if (l != 0) {
 #ifdef _WIN32
-        enable_virtual_terminal();
-#endif
+        move(0, -l);
+#else
         std::cout << "\033[" << l << "A";
+#endif
     }
 }
 
-void move_cursor_down(std::size_t l) {
+void move_cursor_down(int l) {
     if (l != 0) {
 #ifdef _WIN32
-        enable_virtual_terminal();
-#endif
+        move(0, l);
+#else
         std::cout << "\033[" << l << "B";
+#endif
     }
 }
 
-void move_cursor_left(std::size_t count) {
+void move_cursor_left(int l) {
+    if (l != 0) {
 #ifdef _WIN32
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(hOut, &csbi);
-
-    COORD newPos = csbi.dwCursorPosition;
-    newPos.X = std::max<SHORT>(0, newPos.X - static_cast<SHORT>(count));
-    SetConsoleCursorPosition(hOut, newPos);
+        move(-l, 0);
 #else
-    if (count != 0) {
-        std::cout << "\033[" << count << "D";
-    }
+        std::cout << "\033[" << l << "D";
 #endif
+    }
 }
 
-void move_cursor_right(std::size_t count) {
+void move_cursor_right(int l) {
+    if (l != 0) {
 #ifdef _WIN32
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(hOut, &csbi);
-
-    COORD newPos = csbi.dwCursorPosition;
-    newPos.X += static_cast<SHORT>(count);
-    SetConsoleCursorPosition(hOut, newPos);
+        move(l, 0);
 #else
-    if (count != 0) {
-        std::cout << "\033[" << count << "C";
-    }
+        std::cout << "\033[" << l << "C";
 #endif
+    }
 }
 } // namespace term_data

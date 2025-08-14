@@ -117,6 +117,7 @@ void r_github::handle_metadata_request(std::string url) {
         : cpr::Get(cpr::Url{std::move(url)});
 
     if (!if_response_successful(r)) {
+        worker_pool_.stop_all();
         std::exit(-1);
     } else {
         if (r.text.empty()) {
@@ -221,11 +222,12 @@ void r_github::download_from_zip(std::string url) {
     try {
         zip_file zf(temp_file_name);
         zf.remove_unnecessary_dirs_and_save(full_path);
-        fs::remove(temp_file_name);
     } catch (const std::exception& e) {
         std::cerr << e.what();
         std::exit(-1);
     }
+
+    fs::remove(temp_file_name);
 }
 
 void r_github::start() {

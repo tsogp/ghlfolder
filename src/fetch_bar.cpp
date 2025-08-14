@@ -5,9 +5,6 @@
 #include <iostream>
 #include <string>
 #include "utils.hpp"
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 namespace {
     std::string truncate(const std::string &str, int max_length) {
@@ -57,10 +54,10 @@ bool fetch_bar::is_complete() const {
     return progress_.is_complete();
 }
 
-void fetch_bar::set_row_idx(uint row_idx) {
+void fetch_bar::set_row_idx(unsigned int row_idx) {
     this->row_idx = row_idx;
 }
 
-uint fetch_bar::get_row_idx() const {
+unsigned int fetch_bar::get_row_idx() const {
     return row_idx;
 }

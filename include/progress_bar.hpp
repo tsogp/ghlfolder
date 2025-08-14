@@ -1,9 +1,6 @@
 #ifndef __PROGRESS_BAR_HPP__
 #define __PROGRESS_BAR_HPP__
 
-#include <sys/ioctl.h>
-#include <unistd.h>
-
 static constexpr int BAR_POSTFIX_SIZE = 7;
 static constexpr int BAR_MIN_WIDTH = 10;
 static constexpr int BAR_MAX_WIDTH = 100;
