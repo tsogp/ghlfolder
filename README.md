@@ -20,6 +20,7 @@ The project uses the following libraries:
 - **[libcpr](https://github.com/libcpr/cpr)** (C++ cURL wrapper for HTTP requests)  
 - **[nlohmann/json](https://github.com/nlohmann/json)** (for JSON parsing)
 - **[compile-time-regular-expressions](https://github.com/hanickadot/compile-time-regular-expressions)** (for compile time regular expressions)
+- **[libzip](https://libzip.org/)** (for extracting zip archives)
 
 ### **Install dependencies on Ubuntu/Debian Linux**
 
@@ -90,8 +91,33 @@ cmake --install build --config Release
 ```
 
 ### **Usage**
-Just copy the GitHub folder from the browser's URL bar and run it the same way you run *git clone*
+[GitHub API quota](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28) 
+is 60 requests per hour for unauthenticated users and 5000 requests per hour for authenticated users.
+
+If you don't want to authenticate with GitHub tokens, consider using ```--from_zip``` option, which will download the
+whole zipball for you and then extract the required folder for you.
+
 ```sh
-./ghlfolder "https://github.com/<author>/<repo>/tree/<branch>/<folder>"
-./ghlfolder "https://github.com/<author>/<repo>/tree/<branch>/<folder>" --output_dir=/home/user
+# Here were are downloading a part of Linux Kernel.
+# NOTE: if --from_zip is not used here, all quota for your IP address will be gone
+ghlfolder https://github.com/torvalds/linux/tree/master/arch --from_zip
+```
+
+If the folder that you need is small, not using ```--from_zip``` will result into faster download 
+
+```sh
+ghlfolder https://github.com/boostorg/pfr/tree/develop/include/boost
+```
+
+If you want to clone a private repository that you have access to or increase your quota, use ```--token=<token>```
+with your GitHub token
+
+```sh
+ghlfolder https://github.com/<your_name>/pfr/tree/<private_repo_name>/<subfolder> --token=<token>
+```
+
+If you would like to the results to be saved to some specific folder, use ```--output_dir=<dir>```
+
+```sh
+ghlfolder https://github.com/boostorg/pfr/tree/develop/include/boost --output_dir=/home/user
 ```
