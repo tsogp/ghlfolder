@@ -33,29 +33,31 @@ std::size_t bar_pool::push_back(std::unique_ptr<fetch_bar> bar) {
 
 void bar_pool::tick_i(std::size_t index, double progress) {
     std::scoped_lock lck(mutex_);
-    std::size_t offset = total_bars_ - bars_[index]->get_row_idx();
+    int offset = total_bars_ - bars_[index]->get_row_idx();
     term_data::move_cursor_up(offset);
     bars_[index]->tick(progress);
 
-    // Push the completed bar into bottom and non-completed to the top
-    auto* oldest = *current_rows.begin();
-    if (bars_[index]->is_complete() && bars_[index]->get_row_idx() > oldest->get_row_idx()) {
-        term_data::move_cursor_down(offset);
-        
-        std::size_t oldest_active_bar_offset = total_bars_ - oldest->get_row_idx();
-        term_data::move_cursor_up(oldest_active_bar_offset);
-        bars_[index]->display(false);
-        
-        term_data::move_cursor_down(oldest_active_bar_offset);
-        term_data::move_cursor_up(offset);
-        oldest->display(false);
-
-        current_rows.erase(bars_[index].get());
-        current_rows.erase(oldest);
-
-        oldest->set_row_idx(bars_[index]->get_row_idx());
-        if (!oldest->is_complete()) {
-            current_rows.insert(oldest);
+    // Push the completed bar into bottom and non-completed to the 
+    if (!current_rows.empty()) {
+        auto* oldest = *current_rows.begin();
+        if (bars_[index]->is_complete() && bars_[index]->get_row_idx() > oldest->get_row_idx()) {
+            term_data::move_cursor_down(offset);
+            
+            std::size_t oldest_active_bar_offset = total_bars_ - oldest->get_row_idx();
+            term_data::move_cursor_up(oldest_active_bar_offset);
+            bars_[index]->display(false);
+            
+            term_data::move_cursor_down(oldest_active_bar_offset);
+            term_data::move_cursor_up(offset);
+            oldest->display(false);
+    
+            current_rows.erase(bars_[index].get());
+            current_rows.erase(oldest);
+    
+            oldest->set_row_idx(bars_[index]->get_row_idx());
+            if (!oldest->is_complete()) {
+                current_rows.insert(oldest);
+            }
         }
     }
 

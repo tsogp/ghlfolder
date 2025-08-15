@@ -80,6 +80,7 @@ namespace {
 };
 
 int main(int argc, char *argv[]) {
+    std::cout << getpid() << '\n';
     std::atexit(utils::global_cleanup);
     handle_deadly_signals();
     term_data::hide_cursor();
@@ -114,13 +115,12 @@ int main(int argc, char *argv[]) {
         std::exit(1);
     }
 
+    std::string raw_url = program.get("url");
+    std::string output_dir = program.get("output_dir");
+    std::optional<std::string> token = program.present("token");
+    bool from_zip = program.get<bool>("--from_zip");
+    bool is_non_standard_dir = output_dir != ".";
     try {
-        std::string raw_url = program.get("url");
-        std::string output_dir = program.get("output_dir");
-        std::optional<std::string> token = program.present("token");
-        bool from_zip = program.get<bool>("--from_zip");
-
-        bool is_non_standard_dir = output_dir != ".";
         if (is_non_standard_dir) {
             if (!fs::create_directories(output_dir)) {
                 if (!fs::is_empty(output_dir)) {
@@ -143,7 +143,14 @@ int main(int argc, char *argv[]) {
             // No endline character here because each new fetch bar starts with one
             std::cout << std::format("Cloning into '{}'...", output_dir);
         }
+    } catch (const fs::filesystem_error &e) {
+        std::cerr << e.what() << '\n';
+        std::cerr << program;
+        std::exit(1);
+    }
 
+    bool execution_result = true;
+    try {
         // Create directory of subfolder name only if output_dir is not passed
         repo = matcher::get_repo_data(raw_url, !is_non_standard_dir, token, from_zip);
         if (repo == nullptr) {
@@ -156,24 +163,20 @@ int main(int argc, char *argv[]) {
         }
 
         repo->start();
-
-        if (stop_requested) {
-            fs::current_path("..");
-            fs::remove_all(*folder_to_delete);
-        }
-    } catch (const fs::filesystem_error &e) {
-        std::cerr << e.what() << '\n';
-        std::cerr << program;
-        std::exit(1);
+    } catch (const std::exception& e) {
+        execution_result = false;
+        repo->stop();
+        repo.reset();
+        std::cout << e.what() << '\n';
     }
 
-    if (stop_requested) {
+    if (!execution_result || stop_requested) {
+        fs::current_path("..");
+        fs::remove_all(*folder_to_delete);
         std::cout << "\nStopping...\n";
     } else {
         std::cout << "\nDone.\n";
     }
-
-    repo.reset();
 
     term_data::show_cursor();
     return stop_requested ? 1 : 0;

@@ -5,11 +5,13 @@
 #include "utils.hpp"
 #include "term.hpp"
 #include "zip_file.hpp"
+#include <chrono>
 #include <cpr/api.h>
 #include <cpr/bearer.h>
 #include <cpr/cpr.h>
 #include <cpr/response.h>
 #include <cstddef>
+#include <exception>
 #include <filesystem>
 #include <format>
 #include <future>
@@ -17,8 +19,10 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 
 
 using json = nlohmann::json;
@@ -43,32 +47,36 @@ namespace {
         return s;
     }
 
-    bool if_response_successful(const cpr::Response& r) {
+    void ensure_response_success(const cpr::Response& r) {
+        if (r.elapsed > 5) {
+            throw std::runtime_error("\nTimeout.");
+        }
+
         if (r.status_code == 0) {
-            std::cerr << "\nError: " << r.error.message << '\n';
-            return false;
+            throw std::runtime_error("\nError: " + r.error.message);
         } 
         
         if (r.status_code == 404) {
-            std::cerr << "\nServer returned 404: does not exist. Check again if the repository URL is correct or you have access rights to it.";
-            return false;
+            throw std::runtime_error(
+                "\nServer returned 404: does not exist. "
+                "Check again if the repository URL is correct or you have access rights to it."
+            );
         } 
         
         if (r.status_code == 401) {
-            std::cerr << "\nServer returned 401: autorization required. Check again if the token that you have provided is correct.";
-            return false;
+            throw std::runtime_error(
+                "\nServer returned 401: authorization required. "
+                "Check again if the token that you have provided is correct."
+            );
         } 
         
         if (r.status_code == 403 || r.status_code == 429) {
-            // TODO: write the instructions with what to do in case if quota is over
-            json data = json::parse(r.text);
-            std::cerr << '\n' << data["message"];
-            std::cerr << "\nServer returned 403: not autorized." 
-                         "This might be due to no remaining quota for your IP. Consider adding a GitHub token with --token=<token> option.";
-            return false;
+            throw std::runtime_error(
+                "\nServer returned 403: not authorized. "
+                "This might be due to no remaining quota for your IP. "
+                "Consider adding a GitHub token with --token=<token> option."
+            );
         }
-
-        return true;
     }
 }
 
@@ -83,11 +91,11 @@ r_base::r_base(std::string_view author,
     if (create_dir) {
         if (fs::exists(folder)) {
             if (!fs::is_empty(folder)) {
-                std::cerr << std::format("Error: output directory '{}' already exists and it is not empty.\n", folder);
+                std::cout << std::format("Error: output directory '{}' already exists and it is not empty.\n", folder);
                 std::exit(1);
             }
         } else if (!fs::create_directory(folder)) {
-            std::cerr << std::format("Error: couldn't create directory {}", folder);
+            std::cout << std::format("Error: couldn't create directory {}", folder);
             std::exit(1);
         }
 
@@ -113,35 +121,32 @@ r_github::r_github(std::string_view author,
 
 void r_github::handle_metadata_request(std::string url) {
     cpr::Response r = token
-        ? cpr::Get(cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)})
-        : cpr::Get(cpr::Url{std::move(url)});
+        ? cpr::Get(cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)}, cpr::Timeout{5000})
+        : cpr::Get(cpr::Url{std::move(url)}, cpr::Timeout{5000});
 
-    if (!if_response_successful(r)) {
-        worker_pool_.stop_all();
-        std::exit(-1);
-    } else {
-        if (r.text.empty()) {
-            return;
-        }
+    ensure_response_success(r);
 
-        json data = json::parse(r.text);
-        for (auto &it : data) {
-            // TODO: fix to avoid copying
-            std::string trimmed_path = it["path"].template get<std::string>().substr(pathb_idx_);
-            if (it["type"] == "file") {
-                auto task = std::packaged_task<bool(std::stop_token)>(
-                    [name = trimmed_path, url = it["download_url"], file_size = it["size"], this](std::stop_token stoken) {
-                        return handle_request(name, url, file_size, stoken); 
-                    }
-                );
-                
-                auto fut = task.get_future();
-                futures_.emplace_back(std::move(fut));
-                worker_pool_.push_job(std::move(task));
-            } else if (it["type"] == "dir") {
-                fs::create_directory(trimmed_path);
-                handle_metadata_request(std::move(it["url"]));
-            }
+    if (r.text.empty()) {
+        return;
+    }
+
+    json data = json::parse(r.text);
+    for (auto &it : data) {
+        // TODO: fix to avoid copying
+        std::string trimmed_path = it["path"].template get<std::string>().substr(pathb_idx_);
+        if (it["type"] == "file") {
+            auto task = std::packaged_task<bool(std::stop_token)>(
+                [name = trimmed_path, url = it["download_url"], file_size = it["size"], this](std::stop_token stoken) {
+                    return handle_request(name, url, file_size, stoken); 
+                }
+            );
+            
+            auto fut = task.get_future();
+            futures_.emplace_back(std::move(fut));
+            worker_pool_.push_job(std::move(task));
+        } else if (it["type"] == "dir") {
+            fs::create_directory(trimmed_path);
+            handle_metadata_request(std::move(it["url"]));
         }
     }
 }
@@ -166,9 +171,11 @@ bool r_github::handle_request(const std::string &name, std::string url, unsigned
     );
 
     cpr::Response r = token
-        ? cpr::Download(of, cpr::Url{std::move(url)}, callback, cpr::Bearer{std::string(*token)})
-        : cpr::Download(of, cpr::Url{std::move(url)}, callback);
+        ? cpr::Download(of, cpr::Url{std::move(url)}, callback, cpr::Bearer{std::string(*token)}, cpr::Timeout{5000})
+        : cpr::Download(of, cpr::Url{std::move(url)}, callback, cpr::Timeout{5000});
 
+    ensure_response_success(r);
+    
     // by here we know that downloading is completed
     if (downloaded < file_size) {
         bar_pool_.tick_i(idx, (static_cast<double>(file_size) - downloaded) / file_size);
@@ -182,7 +189,6 @@ void r_github::download_from_zip(std::string url) {
 
     std::ofstream file(temp_file_name, std::ios::binary);
     if (!file.is_open()) {
-
         std::exit(-1);
     }
 
@@ -205,16 +211,15 @@ void r_github::download_from_zip(std::string url) {
     );
 
     cpr::Response r = token
-        ? cpr::Download(file, cpr::Url{std::move(url)}, print_progress, cpr::Bearer{std::string(*token)})
-        : cpr::Download(file, cpr::Url{std::move(url)}, print_progress);
+        ? cpr::Download(file, cpr::Url{std::move(url)}, print_progress, cpr::Bearer{std::string(*token)}, cpr::Timeout{5000})
+        : cpr::Download(file, cpr::Url{std::move(url)}, print_progress, cpr::Timeout{5000});
+    
     file.close();
 
+    ensure_response_success(r);
+    
     if (stop_requested) {
         return;
-    }
-
-    if (!if_response_successful(r)) {
-        std::exit(-1);
     }
     
     std::cout << "\nDone.\nExtracting the archive...";
@@ -223,7 +228,7 @@ void r_github::download_from_zip(std::string url) {
         zip_file zf(temp_file_name);
         zf.remove_unnecessary_dirs_and_save(full_path);
     } catch (const std::exception& e) {
-        std::cerr << e.what();
+        std::cout << e.what();
         std::exit(-1);
     }
 
