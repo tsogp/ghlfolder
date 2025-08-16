@@ -11,8 +11,17 @@ zip_file::zip_file(const std::string& file_name) {
     int err = 0;
     archive = zip_open(file_name.c_str(), 0, &err);
     if (archive == nullptr) {
-        throw std::runtime_error(
-            std::format("Failed to open zip: {}", zip_error_strerror(zip_get_error(archive))));
+        zip_error_t ziperror;
+        zip_error_init_with_code(&ziperror, err);
+
+        std::string message = std::format(
+            "Failed to open zip '{}': {}",
+            file_name,
+            zip_error_strerror(&ziperror)
+        );
+
+        zip_error_fini(&ziperror);
+        throw std::runtime_error(message);
     }
 }
 

@@ -5,7 +5,6 @@
 #include "utils.hpp"
 #include "term.hpp"
 #include "zip_file.hpp"
-#include <chrono>
 #include <cpr/api.h>
 #include <cpr/bearer.h>
 #include <cpr/cpr.h>
@@ -22,8 +21,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <thread>
-
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -48,10 +45,6 @@ namespace {
     }
 
     void ensure_response_success(const cpr::Response& r) {
-        if (r.elapsed > 5) {
-            throw std::runtime_error("\nTimeout.");
-        }
-
         if (r.status_code == 0) {
             throw std::runtime_error("\nError: " + r.error.message);
         } 
@@ -121,8 +114,8 @@ r_github::r_github(std::string_view author,
 
 void r_github::handle_metadata_request(std::string url) {
     cpr::Response r = token
-        ? cpr::Get(cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)}, cpr::Timeout{5000})
-        : cpr::Get(cpr::Url{std::move(url)}, cpr::Timeout{5000});
+        ? cpr::Get(cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)})
+        : cpr::Get(cpr::Url{std::move(url)});
 
     ensure_response_success(r);
 
@@ -171,8 +164,8 @@ bool r_github::handle_request(const std::string &name, std::string url, unsigned
     );
 
     cpr::Response r = token
-        ? cpr::Download(of, cpr::Url{std::move(url)}, callback, cpr::Bearer{std::string(*token)}, cpr::Timeout{5000})
-        : cpr::Download(of, cpr::Url{std::move(url)}, callback, cpr::Timeout{5000});
+        ? cpr::Download(of, cpr::Url{std::move(url)}, callback, cpr::Bearer{std::string(*token)})
+        : cpr::Download(of, cpr::Url{std::move(url)}, callback);
 
     ensure_response_success(r);
     
@@ -211,8 +204,8 @@ void r_github::download_from_zip(std::string url) {
     );
 
     cpr::Response r = token
-        ? cpr::Download(file, cpr::Url{std::move(url)}, print_progress, cpr::Bearer{std::string(*token)}, cpr::Timeout{5000})
-        : cpr::Download(file, cpr::Url{std::move(url)}, print_progress, cpr::Timeout{5000});
+        ? cpr::Download(file, cpr::Url{std::move(url)}, print_progress, cpr::Bearer{std::string(*token)})
+        : cpr::Download(file, cpr::Url{std::move(url)}, print_progress);
     
     file.close();
 

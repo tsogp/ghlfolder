@@ -18,30 +18,37 @@ thread_pool::~thread_pool() {
 
 void thread_pool::push_job(std::packaged_task<bool(std::stop_token)> job) {
     std::scoped_lock lock(mutex_);
+    if (!is_active_) {
+        throw thread_pool_stopped{};
+    }
     pending_jobs_.emplace_back(std::move(job));
     cv_.notify_one();
 }
 
 void thread_pool::run(std::stop_token stoken) noexcept {
-    while (is_active_ && !stoken.stop_requested()) {
+    while (true) {
         std::packaged_task<bool(std::stop_token)> job;
         {
             std::unique_lock lock(mutex_);
-            cv_.wait(lock, [&] { return !pending_jobs_.empty() || !is_active_ || stoken.stop_requested(); });
+            cv_.wait(lock, [&] {
+                return !pending_jobs_.empty() || !is_active_ || stoken.stop_requested();
+            });
+
             if (!is_active_ || stoken.stop_requested()) {
                 break;
             }
+
             job.swap(pending_jobs_.front());
             pending_jobs_.pop_front();
             ++jobs_in_progress_;
         }
-        
+
         job(stoken);
 
         {
             std::lock_guard lock(mutex_);
             --jobs_in_progress_;
-            if (!is_active_ || (pending_jobs_.empty() && jobs_in_progress_ == 0)) {
+            if (!is_active_ && jobs_in_progress_ == 0) {
                 out_of_work_.notify_all();
             }
         }
@@ -54,20 +61,13 @@ void thread_pool::wait_for_all() {
         return jobs_in_progress_ == 0;
     });
 }
-
 bool thread_pool::stop_all() {
     {
         std::unique_lock lock(mutex_);
         is_active_ = false;
+        pending_jobs_.clear();
         cv_.notify_all();
     }
-
-    bool all_requested = true;
-    for (auto &thr : pool_) {
-        if (!thr.request_stop()) {
-            all_requested = false;
-        }
-    }
-
-    return all_requested;
+    wait_for_all();
+    return true;
 }

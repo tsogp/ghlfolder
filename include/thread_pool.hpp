@@ -11,6 +11,12 @@
 
 // Implementation heavily influenced by https://nixiz.github.io/yazilim-notlari/2023/10/07/thread_pool-en
 
+struct thread_pool_stopped : public std::exception {
+    const char* what() const noexcept override {
+        return "thread_pool is stopped, cannot accept new jobs";
+    }
+};
+
 class thread_pool {
 public:
     explicit thread_pool(uint32_t threads_num = 1);

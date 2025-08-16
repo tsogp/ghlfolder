@@ -80,7 +80,6 @@ namespace {
 };
 
 int main(int argc, char *argv[]) {
-    std::cout << getpid() << '\n';
     std::atexit(utils::global_cleanup);
     handle_deadly_signals();
     term_data::hide_cursor();
@@ -163,11 +162,24 @@ int main(int argc, char *argv[]) {
         }
 
         repo->start();
+
+    } catch (const thread_pool_stopped& e) {
+        execution_result = false;
+        if (repo != nullptr) {
+            repo->stop();
+            repo.reset();
+        }
     } catch (const std::exception& e) {
         execution_result = false;
-        repo->stop();
-        repo.reset();
+        if (repo != nullptr) {
+            repo->stop();
+            repo.reset();
+        }
         std::cout << e.what() << '\n';
+    }
+
+    if (repo != nullptr) {
+        repo.reset();
     }
 
     if (!execution_result || stop_requested) {
