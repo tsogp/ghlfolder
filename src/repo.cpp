@@ -8,6 +8,8 @@
 #include <cpr/api.h>
 #include <cpr/bearer.h>
 #include <cpr/cpr.h>
+#include <cpr/cprtypes.h>
+#include <cpr/error.h>
 #include <cpr/response.h>
 #include <cstddef>
 #include <exception>
@@ -45,6 +47,11 @@ namespace {
     }
 
     void ensure_response_success(const cpr::Response& r) {
+        // The only means of abortion by callback here is timeout
+        if (r.error.code == cpr::ErrorCode::ABORTED_BY_CALLBACK) {
+            throw std::runtime_error("\nTimeout");
+        }
+
         if (r.status_code == 0) {
             throw std::runtime_error("\nError: " + r.error.message);
         } 
@@ -70,6 +77,19 @@ namespace {
                 "Consider adding a GitHub token with --token=<token> option."
             );
         }
+    }
+
+    constexpr int TIMEOUT_DURATION = 5; 
+
+    bool is_timeouted(auto& last_progress_time, cpr::cpr_off_t downloadNow, unsigned int downloaded) {
+        auto now = std::chrono::steady_clock::now();
+
+        if (downloaded != downloadNow) {
+            last_progress_time = now;
+            downloaded = downloadNow;
+        }
+
+        return std::chrono::duration_cast<std::chrono::seconds>(now - last_progress_time).count() > 5;
     }
 }
 
@@ -113,9 +133,24 @@ r_github::r_github(std::string_view author,
 }
 
 void r_github::handle_metadata_request(std::string url) {
+    unsigned int downloaded = 0;
+    auto last_progress = std::chrono::steady_clock::now();
+
+    auto callback = cpr::ProgressCallback(
+        [&](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow,
+            cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow,
+            intptr_t userdata) -> bool {
+            if (is_timeouted(last_progress,  downloadNow, downloaded)) {
+                return false;
+            }
+
+            return true;
+        }
+    );
+
     cpr::Response r = token
-        ? cpr::Get(cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)})
-        : cpr::Get(cpr::Url{std::move(url)});
+        ? cpr::Get(cpr::Url{std::move(url)}, cpr::Bearer{std::string(*token)}, callback)
+        : cpr::Get(cpr::Url{std::move(url)}, callback);
 
     ensure_response_success(r);
 
@@ -149,11 +184,16 @@ bool r_github::handle_request(const std::string &name, std::string url, unsigned
     const std::size_t idx = bar_pool_.push_back(std::make_unique<fetch_bar>(name, file_size));
     unsigned int downloaded = 0;
 
+    auto last_progress = std::chrono::steady_clock::now();
     auto callback = cpr::ProgressCallback(
         [&](cpr::cpr_off_t downloadTotal, cpr::cpr_off_t downloadNow,
             cpr::cpr_off_t uploadTotal, cpr::cpr_off_t uploadNow,
             intptr_t userdata) -> bool {
             if (stoken.stop_requested()) {
+                return false;
+            }
+
+            if (is_timeouted(last_progress,  downloadNow, downloaded)) {
                 return false;
             }
 
@@ -167,6 +207,11 @@ bool r_github::handle_request(const std::string &name, std::string url, unsigned
         ? cpr::Download(of, cpr::Url{std::move(url)}, callback, cpr::Bearer{std::string(*token)})
         : cpr::Download(of, cpr::Url{std::move(url)}, callback);
 
+    // If the pool is interrupted, return here
+    if (stoken.stop_requested()) {
+        return false;
+    }
+
     ensure_response_success(r);
     
     // by here we know that downloading is completed
@@ -174,10 +219,11 @@ bool r_github::handle_request(const std::string &name, std::string url, unsigned
         bar_pool_.tick_i(idx, (static_cast<double>(file_size) - downloaded) / file_size);
     }
 
-    return !stoken.stop_requested();
+    return true;
 }
 
 void r_github::download_from_zip(std::string url) {
+    unsigned int downloaded = 0;
     std::string temp_file_name = std::format("{}.zip", random_string(10));
 
     std::ofstream file(temp_file_name, std::ios::binary);
@@ -187,12 +233,17 @@ void r_github::download_from_zip(std::string url) {
 
     std::cout << "\nDownloaded";
 
+    auto last_progress = std::chrono::steady_clock::now();
     auto print_progress = cpr::ProgressCallback([&](cpr::cpr_off_t downloadTotal,
         cpr::cpr_off_t downloadNow,
         cpr::cpr_off_t uploadTotal,
         cpr::cpr_off_t uploadNow,
         intptr_t userdata) -> bool {
             if (stop_requested) {
+                return false;
+            }
+
+            if (is_timeouted(last_progress,  downloadNow, downloaded)) {
                 return false;
             }
 
@@ -209,11 +260,12 @@ void r_github::download_from_zip(std::string url) {
     
     file.close();
 
-    ensure_response_success(r);
-    
+    // If the procedd is interrupted, return here
     if (stop_requested) {
         return;
     }
+
+    ensure_response_success(r);
     
     std::cout << "\nDone.\nExtracting the archive...";
 
