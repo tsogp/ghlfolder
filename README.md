@@ -28,7 +28,7 @@ The project uses the following libraries:
 sudo apt install nlohmann-json3-dev libzip-dev libssl-dev libpsl-dev zipcmp zipmerge ziptool 
 ```
 
-**[pranav/argparse](https://github.com/p-ranav/argparse)** and **[compile-time-regular-expressions](https://github.com/hanickadot/compile-time-regular-expressions)** are not available in the package managers, so those have to be built from source.
+**[libcpr](https://github.com/libcpr/cpr), [pranav/argparse](https://github.com/p-ranav/argparse)** and **[compile-time-regular-expressions](https://github.com/hanickadot/compile-time-regular-expressions)** are not available in the package managers, so those have to be built from source.
 
 ```sh
 # Build libcpr
@@ -113,7 +113,7 @@ If you want to clone a private repository that you have access to or increase yo
 with your GitHub token
 
 ```sh
-ghlfolder https://github.com/<your_name>/pfr/tree/<private_repo_name>/<subfolder> --token=<token>
+ghlfolder https://github.com/<your_name>/<private_repo_name>/<subfolder> --token=<token>
 ```
 
 If you would like to the results to be saved to some specific folder, use ```--output_dir=<dir>```
