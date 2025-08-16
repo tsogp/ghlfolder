@@ -48,7 +48,7 @@ void thread_pool::run(std::stop_token stoken) noexcept {
         {
             std::lock_guard lock(mutex_);
             --jobs_in_progress_;
-            if (!is_active_ && jobs_in_progress_ == 0) {
+            if (!is_active_ || jobs_in_progress_ == 0) {
                 out_of_work_.notify_all();
             }
         }
